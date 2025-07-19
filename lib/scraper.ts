@@ -1,6 +1,6 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page, LaunchOptions } from 'puppeteer';
 import type { TrainStatus } from '@/types';
-import { AppError, ErrorType, ErrorLevel, errorHandler } from './error-handler';
+import { AppError, ErrorType, ErrorLevel } from './error-handler';
 import { logger } from './logger';
 
 const JR_TAKASAKI_URL = 'https://traininfo.jreast.co.jp/train_info/line.aspx?gid=1&lineid=takasakiline';
@@ -83,7 +83,7 @@ export async function scrapeTrainStatus(): Promise<TrainStatus> {
         logger.info(`リトライ ${attempt}/${MAX_RETRIES}`, 'Scraper');
       }
       // ブラウザを起動
-      const launchOptions: any = {
+      const launchOptions: LaunchOptions = {
         headless: process.env.PUPPETEER_HEADLESS !== 'false',
         args: [
           '--no-sandbox',
