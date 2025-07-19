@@ -3,18 +3,18 @@
 import cron from 'node-cron';
 import { checkTrainStatusAndNotify, isWeekday } from '../lib/scheduler';
 
-// 環境変数の設定
-process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+// 環境変数の確認
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 console.log('=================================');
 console.log('JR高崎線 運行状況監視スケジューラー');
 console.log('=================================');
-console.log(`環境: ${process.env.NODE_ENV}`);
+console.log(`環境: ${NODE_ENV}`);
 console.log(`開始時刻: ${new Date().toLocaleString('ja-JP')}`);
 console.log('');
 
 // 開発環境用の設定
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = NODE_ENV !== 'production';
 
 // 定期チェックのcron設定
 // 本番: 平日の7:00と17:00
@@ -61,9 +61,6 @@ const task = cron.schedule(schedulePattern, async () => {
   } catch (error) {
     console.error('❌ スケジューラーエラー:', error);
   }
-}, {
-  scheduled: true,
-  timezone: 'Asia/Tokyo'
 });
 
 // 起動時に即座に1回実行（開発環境のみ）
@@ -99,7 +96,8 @@ if (isDevelopment) {
   process.stdin.resume();
   process.stdin.setEncoding('utf8');
   
-  process.stdin.on('data', async (key) => {
+  process.stdin.on('data', async (data) => {
+    const key = data.toString();
     if (key === 'c') {
       await manualCheck();
     } else if (key === 'q' || key === '\u0003') { // Ctrl+C

@@ -208,7 +208,11 @@ export class Logger extends EventEmitter {
   }
 
   // 運行状況履歴を取得
-  getStatusHistory(limit?: number): typeof this.statusHistory {
+  getStatusHistory(limit?: number): Array<{
+    timestamp: Date;
+    status: string;
+    previousStatus: string | null;
+  }> {
     if (limit) {
       return this.statusHistory.slice(-limit);
     }
@@ -230,7 +234,11 @@ export class Logger extends EventEmitter {
     totalLogs: number;
     logsByLevel: Record<string, number>;
     recentErrors: LogEntry[];
-    statusHistory: typeof this.statusHistory;
+    statusHistory: Array<{
+      timestamp: Date;
+      status: string;
+      previousStatus: string | null;
+    }>;
     options: LoggerOptions;
   } {
     const logsByLevel: Record<string, number> = {};

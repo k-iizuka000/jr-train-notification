@@ -46,18 +46,15 @@ async function scrapeWithBrowser(browser: Browser): Promise<string> {
     logger.debug('ページの読み込みが完了しました', 'Scraper');
     
     // XPathで要素を取得
-    await page.waitForXPath(STATUS_XPATH, { timeout: TIMEOUT });
-    const elements = await page.$x(STATUS_XPATH);
+    await page.waitForSelector(`::-p-xpath(${STATUS_XPATH})`, { timeout: TIMEOUT });
+    const statusTexts = await page.$$eval(`::-p-xpath(${STATUS_XPATH})`, els => els.map(el => el.textContent?.trim() || ''));
     
-    if (elements.length === 0) {
+    if (statusTexts.length === 0) {
       throw new Error('運行状況要素が見つかりませんでした');
     }
     
     // テキストを取得
-    const statusText = await page.evaluate(
-      (el: Element) => el.textContent?.trim() || '',
-      elements[0]
-    );
+    const statusText = statusTexts[0];
     
     if (!statusText) {
       throw new Error('運行状況テキストが空です');

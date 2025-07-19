@@ -203,7 +203,7 @@ export default function DebugPage() {
                     )}
                     {' '}
                     <span className="text-gray-800">{log.message}</span>
-                    {log.data && (
+                    {log.data !== undefined && log.data !== null && (
                       <details className="ml-4 mt-1">
                         <summary className="cursor-pointer text-gray-600">データ</summary>
                         <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">

@@ -111,9 +111,6 @@ export default function TrainStatusDisplay() {
         <p className="text-lg sm:text-xl font-semibold break-words">
           {status?.status || '情報を取得できません'}
         </p>
-        {status?.details && (
-          <p className="mt-2 text-gray-700 text-sm sm:text-base">{status.details}</p>
-        )}
       </div>
       
       <div className="text-xs sm:text-sm text-gray-600">
