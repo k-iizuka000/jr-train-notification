@@ -1,7 +1,26 @@
-import puppeteer, { Browser, Page, LaunchOptions } from 'puppeteer';
+import type { Browser, Page, LaunchOptions } from 'puppeteer-core';
 import type { TrainStatus } from '@/types';
 import { AppError, ErrorType, ErrorLevel } from './error-handler';
 import { logger } from './logger';
+
+// Vercel環境検出
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+
+// 動的インポートで環境に応じてライブラリを選択
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let puppeteer: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let chromium: any;
+
+if (isVercel) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  chromium = require('@sparticuz/chromium');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  puppeteer = require('puppeteer-core');
+} else {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  puppeteer = require('puppeteer');
+}
 
 const JR_TAKASAKI_URL = 'https://traininfo.jreast.co.jp/train_info/line.aspx?gid=1&lineid=takasakiline';
 const STATUS_XPATH = '//*[@id="contents"]/section/section[2]/section[1]/div/div';
@@ -83,28 +102,42 @@ export async function scrapeTrainStatus(): Promise<TrainStatus> {
         logger.info(`リトライ ${attempt}/${MAX_RETRIES}`, 'Scraper');
       }
       // ブラウザを起動
-      const launchOptions: LaunchOptions = {
-        headless: process.env.PUPPETEER_HEADLESS !== 'false',
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--no-zygote',
-          '--single-process'
-        ]
-      };
-
-      // Vercel環境用の実行パス設定
-      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-        logger.debug(`カスタム実行パスを使用: ${process.env.PUPPETEER_EXECUTABLE_PATH}`, 'Scraper');
+      let launchOptions: LaunchOptions;
+      
+      if (isVercel) {
+        // Vercel環境用の設定
+        launchOptions = {
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+        };
+        logger.debug('Vercel環境でchrome-aws-lambdaを使用', 'Scraper');
+      } else {
+        // ローカル環境用の設定
+        launchOptions = {
+          headless: process.env.PUPPETEER_HEADLESS !== 'false',
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-zygote',
+            '--single-process'
+          ]
+        };
+        
+        // カスタム実行パス設定
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+          launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+          logger.debug(`カスタム実行パスを使用: ${process.env.PUPPETEER_EXECUTABLE_PATH}`, 'Scraper');
+        }
       }
 
-      logger.debug('Puppeteerを起動中...', 'Scraper', { launchOptions });
+      logger.debug('Puppeteerを起動中...', 'Scraper', { launchOptions, isVercel });
       browser = await puppeteer.launch(launchOptions);
       
-      const statusText = await scrapeWithBrowser(browser);
+      const statusText = await scrapeWithBrowser(browser!);
       
       // 運行状況オブジェクトを作成
       const trainStatus: TrainStatus = {

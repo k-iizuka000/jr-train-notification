@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "devCommand": "npm run dev",
-  "installCommand": "npm install && npx puppeteer browsers install chrome",
+  "installCommand": "npm install",
   "framework": "nextjs",
   "functions": {
     "app/api/jr/check/route.ts": {
@@ -30,9 +30,5 @@
       "path": "/api/jr/check",
       "schedule": "0 17 * * 1-5"
     }
-  ],
-  "env": {
-    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "false",
-    "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium-browser"
-  }
+  ]
 }
