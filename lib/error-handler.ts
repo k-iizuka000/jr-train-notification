@@ -24,7 +24,7 @@ export class AppError extends Error {
     public message: string,
     public level: ErrorLevel = ErrorLevel.ERROR,
     public originalError?: Error | unknown,
-    public details?: Record<string, any>
+    public details?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'AppError';
@@ -67,7 +67,7 @@ export class ErrorHandler {
   handleError(
     error: unknown,
     context?: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): AppError {
     let appError: AppError;
 

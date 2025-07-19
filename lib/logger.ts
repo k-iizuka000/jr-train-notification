@@ -15,7 +15,7 @@ export interface LogEntry {
   level: LogLevel;
   message: string;
   context?: string;
-  data?: any;
+  data?: unknown;
   error?: Error;
 }
 
@@ -67,7 +67,7 @@ export class Logger extends EventEmitter {
   }
 
   // ログ出力
-  private log(level: LogLevel, message: string, context?: string, data?: any, error?: Error): void {
+  private log(level: LogLevel, message: string, context?: string, data?: unknown, error?: Error): void {
     if (level < this.options.level) return;
 
     const entry: LogEntry = {
@@ -118,19 +118,19 @@ export class Logger extends EventEmitter {
   }
 
   // 公開メソッド
-  debug(message: string, context?: string, data?: any): void {
+  debug(message: string, context?: string, data?: unknown): void {
     this.log(LogLevel.DEBUG, message, context, data);
   }
 
-  info(message: string, context?: string, data?: any): void {
+  info(message: string, context?: string, data?: unknown): void {
     this.log(LogLevel.INFO, message, context, data);
   }
 
-  warn(message: string, context?: string, data?: any): void {
+  warn(message: string, context?: string, data?: unknown): void {
     this.log(LogLevel.WARN, message, context, data);
   }
 
-  error(message: string, context?: string, error?: Error, data?: any): void {
+  error(message: string, context?: string, error?: Error, data?: unknown): void {
     this.log(LogLevel.ERROR, message, context, data, error);
     this.emit('error', error || new Error(message), context || 'Unknown');
   }
@@ -160,7 +160,7 @@ export class Logger extends EventEmitter {
   }
 
   // 通知送信をログ
-  logNotificationSent(succeeded: number, failed: number, details?: any): void {
+  logNotificationSent(succeeded: number, failed: number, details?: unknown): void {
     const message = `通知送信完了: 成功=${succeeded}, 失敗=${failed}`;
     
     if (failed > 0) {

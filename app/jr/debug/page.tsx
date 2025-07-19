@@ -7,9 +7,9 @@ import { errorHandler } from '@/lib/error-handler';
 
 export default function DebugPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [errorLogs, setErrorLogs] = useState<any[]>([]);
-  const [statusHistory, setStatusHistory] = useState<any[]>([]);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [errorLogs, setErrorLogs] = useState<ReturnType<typeof errorHandler.getErrorLog>>([]);
+  const [statusHistory, setStatusHistory] = useState<ReturnType<typeof logger.getStatusHistory>>([]);
+  const [debugInfo, setDebugInfo] = useState<ReturnType<typeof logger.getDebugInfo> | null>(null);
   const [logLevel, setLogLevel] = useState<LogLevel>(LogLevel.INFO);
   const [autoRefresh, setAutoRefresh] = useState(true);
 

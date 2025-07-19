@@ -3,7 +3,7 @@ import type { ApiResponse } from '@/types';
 import { AppError, errorHandler } from './error-handler';
 import { logger } from './logger';
 
-export function createApiResponse<T = any>(
+export function createApiResponse<T = unknown>(
   data: T,
   status: number = 200,
   headers?: HeadersInit
