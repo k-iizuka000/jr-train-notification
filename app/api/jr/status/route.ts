@@ -8,6 +8,9 @@ import { logger } from '@/lib/logger';
 // 開発環境でモックを使用するかどうか
 const USE_MOCK = process.env.NODE_ENV === 'development' && process.env.USE_MOCK_SCRAPER === 'true';
 
+// Vercel Edge Runtime設定
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   logger.info('GET /api/jr/statusへのリクエスト', 'API', {

@@ -3,6 +3,9 @@ import { checkTrainStatusAndNotify, getSchedulerState } from '@/lib/scheduler';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 
+// Vercel Runtime設定
+export const runtime = 'nodejs';
+
 // 内部APIのための簡易的な認証トークン（本番環境では環境変数から取得）
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || 'dev-internal-api-token';
 

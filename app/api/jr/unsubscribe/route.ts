@@ -4,6 +4,9 @@ import { createApiResponse, createApiError } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import type { UnsubscribeRequest } from '@/types';
 
+// Vercel Runtime設定
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     // リクエストボディを取得

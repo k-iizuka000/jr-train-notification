@@ -4,6 +4,9 @@ import { sendTestNotification, PushNotificationError } from '@/lib/push-notifica
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
 import type { SubscribeRequest } from '@/types';
 
+// Vercel Runtime設定
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     // リクエストボディを取得
