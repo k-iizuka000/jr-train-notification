@@ -52,19 +52,42 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     const duration = Date.now() - startTime;
+    
+    // エラーの詳細情報を取得
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorDetails = {
+      duration,
+      errorType: error?.constructor?.name || 'Unknown',
+      message: errorMessage,
+      stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+      useMock: USE_MOCK
+    };
+    
     logger.error(
       'GET /api/jr/statusでエラー発生',
       'API',
       error instanceof Error ? error : new Error(String(error)),
-      { duration }
+      errorDetails
     );
 
     // エラーの種類に応じて適切なレスポンスを返す
     if (error instanceof ScraperError) {
       return createApiError(
         'SCRAPING_ERROR',
-        'JR東日本のサイトから情報を取得できませんでした。しばらく時間をおいてから再度お試しください。',
+        `JR東日本のサイトから情報を取得できませんでした。${process.env.NODE_ENV === 'development' ? ` 詳細: ${errorMessage}` : ''} しばらく時間をおいてから再度お試しください。`,
         503,
+        undefined,
+        error
+      );
+    }
+
+    // Puppeteer関連のエラーを特定
+    if (errorMessage.includes('Failed to launch') || errorMessage.includes('puppeteer') || errorMessage.includes('chromium')) {
+      return createApiError(
+        'BROWSER_LAUNCH_ERROR',
+        `ブラウザの起動に失敗しました。${process.env.NODE_ENV === 'development' ? ` 詳細: ${errorMessage}` : ''} システム管理者にお問い合わせください。`,
+        500,
         undefined,
         error
       );
@@ -73,7 +96,7 @@ export async function GET(request: NextRequest) {
     // その他のエラー
     return createApiError(
       'INTERNAL_ERROR',
-      '予期しないエラーが発生しました。',
+      `予期しないエラーが発生しました。${process.env.NODE_ENV === 'development' ? ` 詳細: ${errorMessage}` : ''}`,
       500,
       undefined,
       error

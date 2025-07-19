@@ -83,7 +83,7 @@ export async function scrapeTrainStatus(): Promise<TrainStatus> {
         logger.info(`リトライ ${attempt}/${MAX_RETRIES}`, 'Scraper');
       }
       // ブラウザを起動
-      browser = await puppeteer.launch({
+      const launchOptions: any = {
         headless: process.env.PUPPETEER_HEADLESS !== 'false',
         args: [
           '--no-sandbox',
@@ -93,7 +93,16 @@ export async function scrapeTrainStatus(): Promise<TrainStatus> {
           '--no-zygote',
           '--single-process'
         ]
-      });
+      };
+
+      // Vercel環境用の実行パス設定
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        logger.debug(`カスタム実行パスを使用: ${process.env.PUPPETEER_EXECUTABLE_PATH}`, 'Scraper');
+      }
+
+      logger.debug('Puppeteerを起動中...', 'Scraper', { launchOptions });
+      browser = await puppeteer.launch(launchOptions);
       
       const statusText = await scrapeWithBrowser(browser);
       
