@@ -2,13 +2,11 @@
   "crons": [
     {
       "path": "/api/jr/check",
-      "schedule": "0 7 * * 1-5",
-      "env": "production"
+      "schedule": "0 7 * * 1-5"
     },
     {
       "path": "/api/jr/check",
-      "schedule": "0 17 * * 1-5",
-      "env": "production"
+      "schedule": "0 17 * * 1-5"
     }
   ]
 }
