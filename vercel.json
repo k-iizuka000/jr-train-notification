@@ -1,0 +1,14 @@
+{
+  "crons": [
+    {
+      "path": "/api/jr/check",
+      "schedule": "0 7 * * 1-5",
+      "env": "production"
+    },
+    {
+      "path": "/api/jr/check",
+      "schedule": "0 17 * * 1-5",
+      "env": "production"
+    }
+  ]
+}
