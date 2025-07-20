@@ -80,7 +80,14 @@ export function checkPushNotificationSupport(): {
   requiresUserInteraction: boolean;
   error?: string;
 } {
-  const result = {
+  const result: {
+    isSupported: boolean;
+    hasServiceWorker: boolean;
+    hasPushManager: boolean;
+    hasNotificationAPI: boolean;
+    requiresUserInteraction: boolean;
+    error?: string;
+  } = {
     isSupported: false,
     hasServiceWorker: 'serviceWorker' in navigator,
     hasPushManager: 'PushManager' in window,
