@@ -25,6 +25,12 @@ export default function NotificationSettings() {
   // 初期化
   useEffect(() => {
     const init = async () => {
+      // VAPID公開鍵の確認
+      if (!VAPID_PUBLIC_KEY) {
+        console.error('VAPID公開鍵が設定されていません');
+        setError('通知機能を使用するには、環境変数NEXT_PUBLIC_VAPID_PUBLIC_KEYを設定してください');
+      }
+      
       // プッシュ通知のサポート確認
       const supported = isPushNotificationSupported();
       setIsSupported(supported);
@@ -237,10 +243,18 @@ export default function NotificationSettings() {
         )}
         
         {!VAPID_PUBLIC_KEY && (
-          <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
-            <p className="text-sm text-yellow-700">
-              VAPID公開鍵が設定されていません。環境変数を確認してください。
+          <div className="bg-red-50 border border-red-300 rounded p-3">
+            <p className="text-sm text-red-700 font-semibold">
+              エラー: VAPID公開鍵が設定されていません
             </p>
+            <p className="text-sm text-red-600 mt-1">
+              通知機能を使用するには、以下の手順を実行してください：
+            </p>
+            <ol className="text-sm text-red-600 mt-2 list-decimal list-inside space-y-1">
+              <li>スクリプトを実行: <code className="bg-red-100 px-1 rounded">node scripts/generate-vapid-keys.js</code></li>
+              <li>生成された公開鍵を環境変数に設定</li>
+              <li>Vercelの環境変数に <code className="bg-red-100 px-1 rounded">NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> を追加</li>
+            </ol>
           </div>
         )}
         
