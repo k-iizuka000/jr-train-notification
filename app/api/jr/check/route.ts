@@ -72,24 +72,57 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   logger.info('GET /api/jr/checkへのリクエスト', 'API', {
     url: request.url,
-    method: 'GET'
+    method: 'GET',
+    headers: Object.fromEntries(request.headers.entries())
   });
   
   try {
-    // 内部API認証の確認
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || authHeader !== `Bearer ${INTERNAL_API_TOKEN}`) {
-      logger.warn('認証失敗', 'API', {
-        hasAuthHeader: !!authHeader
-      });
-      return createApiError(
-        'UNAUTHORIZED',
-        '認証に失敗しました。',
-        401
-      );
+    // Vercel Cronからのリクエストかチェック
+    const isVercelCron = request.headers.get('x-vercel-cron') === '1';
+    
+    // 内部API認証の確認（Vercel Cronの場合はスキップ）
+    if (!isVercelCron) {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader || authHeader !== `Bearer ${INTERNAL_API_TOKEN}`) {
+        logger.warn('認証失敗', 'API', {
+          hasAuthHeader: !!authHeader
+        });
+        return createApiError(
+          'UNAUTHORIZED',
+          '認証に失敗しました。',
+          401
+        );
+      }
+    } else {
+      logger.info('Vercel Cronからのリクエストを検出', 'API');
     }
 
-    // 現在の状態を返す
+    // Vercel Cronからの場合は運行状況チェックを実行
+    if (isVercelCron) {
+      logger.info('Vercel Cronによる定期チェックを実行中...', 'API');
+      const result = await checkTrainStatusAndNotify();
+      
+      // 現在の状態を取得
+      const state = getSchedulerState();
+      
+      logger.info('Vercel Cron定期チェック完了', 'API', {
+        status: result.status,
+        notificationSent: result.notificationSent,
+        isDelayed: state.isDelayed,
+        hasError: !!result.error
+      });
+      
+      return createApiResponse({
+        message: 'Vercel Cronによる運行状況チェックを実行しました。',
+        currentStatus: result.status,
+        notificationSent: result.notificationSent,
+        lastCheckTime: state.lastCheckTime,
+        isDelayed: state.isDelayed,
+        error: result.error
+      });
+    }
+    
+    // 通常のGETリクエストの場合は現在の状態を返す
     const state = getSchedulerState();
     
     logger.debug('スケジューラ状態を返します', 'API', {
