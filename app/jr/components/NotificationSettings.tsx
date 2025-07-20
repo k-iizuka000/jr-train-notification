@@ -151,18 +151,45 @@ export default function NotificationSettings() {
       
       console.log('サーバーレスポンス:', response.status);
       
+      // レスポンスのContent-Typeを確認
+      const contentType = response.headers.get('content-type');
+      console.log('レスポンスContent-Type:', contentType);
+      
+      if (!response.ok) {
+        let errorMessage = '購読登録に失敗しました';
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (jsonError) {
+            console.error('エラーレスポンスのJSONパースエラー:', jsonError);
+          }
+        } else {
+          // JSONでない場合はテキストとして読み取る
+          try {
+            const errorText = await response.text();
+            console.error('エラーレスポンス（非JSON）:', errorText);
+            errorMessage = 'サーバーエラーが発生しました';
+          } catch (textError) {
+            console.error('エラーレスポンスの読み取りエラー:', textError);
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      // 成功時のJSONパース
       let data;
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('レスポンスのJSONパースエラー:', jsonError);
-        const text = await response.text();
-        console.error('レスポンステキスト:', text);
+        console.error('成功レスポンスのJSONパースエラー:', jsonError);
         throw new Error('サーバーからの応答が不正です');
       }
       
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || '購読登録に失敗しました');
+      if (!data.success) {
+        throw new Error(data.error || data.message || '購読登録に失敗しました');
       }
       
       setIsSubscribed(true);

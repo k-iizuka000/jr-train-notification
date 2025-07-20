@@ -9,10 +9,16 @@ import type { SubscribeRequest } from '@/types';
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  console.log('=== /api/jr/subscribe POST開始 ===');
+  console.log('リクエストヘッダー:', Object.fromEntries(request.headers.entries()));
+  
   try {
     // Content-Typeヘッダーを確認
     const contentType = request.headers.get('content-type');
+    console.log('Content-Type:', contentType);
+    
     if (!contentType || !contentType.includes('application/json')) {
+      console.error('Content-Typeエラー:', contentType);
       return createApiError(
         'INVALID_REQUEST',
         'Content-Type must be application/json',
@@ -86,8 +92,20 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || 'unknown'
     });
     
-    await subscriptionStore.addSubscription(body.subscription);
-    console.log('購読情報の保存完了');
+    try {
+      await subscriptionStore.addSubscription(body.subscription);
+      console.log('購読情報の保存完了');
+    } catch (saveError) {
+      console.error('購読情報の保存エラー:', saveError);
+      return createApiError(
+        'STORAGE_ERROR',
+        '購読情報の保存に失敗しました。しばらくしてからもう一度お試しください。',
+        500,
+        {
+          'Content-Type': 'application/json',
+        }
+      );
+    }
 
     // テスト通知を送信
     try {
@@ -134,7 +152,8 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('購読登録エラー:', error);
+    console.error('=== 購読登録エラー ===');
+    console.error('エラー:', error);
     
     // エラーの詳細をログに記録
     if (error instanceof Error) {
@@ -145,7 +164,7 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    return createApiError(
+    const errorResponse = createApiError(
       'SUBSCRIPTION_ERROR',
       error instanceof Error ? error.message : 'プッシュ通知の購読に失敗しました。',
       500,
@@ -153,6 +172,9 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       }
     );
+    
+    console.log('=== エラーレスポンス送信 ===');
+    return errorResponse;
   }
 }
 
