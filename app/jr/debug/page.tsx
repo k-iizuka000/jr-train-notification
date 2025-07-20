@@ -85,20 +85,20 @@ export default function DebugPage() {
     }
   };
 
-  // 開発環境でのみ表示
-  if (process.env.NODE_ENV !== 'development') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">アクセスできません</h1>
-          <p className="text-gray-600 mb-6">このページは開発環境でのみ利用可能です。</p>
-          <Link href="/jr" className="text-blue-600 hover:text-blue-800 underline">
-            ホームに戻る
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // 開発環境チェックを一時的に無効化（デバッグのため）
+  // if (process.env.NODE_ENV !== 'development') {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-gray-50">
+  //       <div className="text-center">
+  //         <h1 className="text-2xl font-bold text-gray-900 mb-4">アクセスできません</h1>
+  //         <p className="text-gray-600 mb-6">このページは開発環境でのみ利用可能です。</p>
+  //         <Link href="/jr" className="text-blue-600 hover:text-blue-800 underline">
+  //           ホームに戻る
+  //         </Link>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <main className="min-h-screen p-4 sm:p-8 bg-gray-50">

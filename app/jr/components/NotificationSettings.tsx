@@ -78,6 +78,24 @@ export default function NotificationSettings() {
     };
     
     init();
+    
+    // iOS向けデバッグ情報を追加表示
+    console.group('🔍 iOS Push Notification Debug Info');
+    console.log('VAPID Public Key:', VAPID_PUBLIC_KEY);
+    console.log('Key Length:', VAPID_PUBLIC_KEY.length);
+    console.log('First 10 chars:', VAPID_PUBLIC_KEY.substring(0, 10));
+    console.log('Last 10 chars:', VAPID_PUBLIC_KEY.substring(VAPID_PUBLIC_KEY.length - 10));
+    
+    // Base64文字チェック
+    const invalidChars = VAPID_PUBLIC_KEY.match(/[^A-Za-z0-9\-_=]/g);
+    if (invalidChars) {
+      console.error('Invalid characters found:', invalidChars);
+    }
+    
+    // デバイス情報
+    const deviceInfo = getDeviceInfo();
+    console.log('Device Info:', deviceInfo);
+    console.groupEnd();
   }, []);
 
   // 通知を有効化
