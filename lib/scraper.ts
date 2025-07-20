@@ -3,8 +3,8 @@ import type { TrainStatus } from '@/types';
 import { AppError, ErrorType, ErrorLevel } from './error-handler';
 import { logger } from './logger';
 
-// Vercel環境検出
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+// Vercel環境検出（ローカルでは常にfalseにする）
+const isVercel = (process.env.VERCEL === '1' || process.env.VERCEL_ENV) && process.platform === 'linux';
 
 // 動的インポートで環境に応じてライブラリを選択
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,7 +14,7 @@ let chromium: any;
 
 if (isVercel) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  chromium = require('@sparticuz/chromium');
+  chromium = require('@sparticuz/chromium').default || require('@sparticuz/chromium');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   puppeteer = require('puppeteer-core');
 } else {

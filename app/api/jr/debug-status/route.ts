@@ -39,7 +39,7 @@ export async function GET() {
     // @sparticuz/chromiumの確認
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const chromium = require('@sparticuz/chromium');
+      const chromium = require('@sparticuz/chromium').default || require('@sparticuz/chromium');
       debugInfo.chromium.sparticuzAvailable = true;
       debugInfo.chromium.executablePath = await chromium.executablePath();
     } catch (error) {
