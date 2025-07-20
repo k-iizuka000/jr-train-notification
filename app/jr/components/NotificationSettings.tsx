@@ -11,7 +11,7 @@ import {
   getNotificationPermission
 } from '@/lib/service-worker';
 import { validateVapidPublicKey, getVapidKeyDebugInfo } from '@/utils/vapid-helper';
-import { isIOS, getDeviceInfo } from '@/utils/platform-detector';
+import { isIOS, getDeviceInfo, isStandalonePWA } from '@/utils/platform-detector';
 
 // VAPID公開鍵（環境変数から取得）
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -348,6 +348,18 @@ export default function NotificationSettings() {
               {isIOS() 
                 ? 'Safariの設定 → 「Webサイトの設定」→「通知」から、このサイトの通知を許可してください。'
                 : 'ブラウザの設定から通知を許可してください。'}
+            </p>
+          </div>
+        )}
+        
+        {isIOS() && !isStandalonePWA() && (
+          <div className="bg-blue-50 border border-blue-300 rounded p-3">
+            <p className="text-sm text-blue-700 font-semibold">
+              iOSでプッシュ通知を利用するには
+            </p>
+            <p className="text-sm text-blue-600 mt-1">
+              このサイトをホーム画面に追加してからアプリを開いてください。
+              ブラウザから直接アクセスした場合、プッシュ通知は利用できません。
             </p>
           </div>
         )}

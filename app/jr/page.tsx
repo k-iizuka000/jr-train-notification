@@ -2,6 +2,7 @@ import Link from 'next/link';
 import TrainStatusDisplay from './components/TrainStatusDisplay';
 import NotificationSettings from './components/NotificationSettings';
 import ErrorBoundary from '@/app/components/ErrorBoundary';
+import InstallPrompt from './components/InstallPrompt';
 
 export default function JRPage() {
   return (
@@ -34,6 +35,8 @@ export default function JRPage() {
           <p>※ 平日の朝7:00と夕方17:00に定期チェックを行います</p>
         </div>
       </div>
+      
+      <InstallPrompt />
     </main>
   );
 }

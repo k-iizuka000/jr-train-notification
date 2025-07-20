@@ -95,13 +95,21 @@ export function checkPushNotificationSupport(): {
     requiresUserInteraction: false,
   };
 
-  // iOS 16.4以降でプッシュ通知をサポート
+  // iOS 16.4以降でプッシュ通知をサポート（PWAモードのみ）
   if (isIOS()) {
     const iosVersion = getIOSVersion();
     if (iosVersion && iosVersion < 16.4) {
       return {
         ...result,
         error: `iOS ${iosVersion}はプッシュ通知をサポートしていません。iOS 16.4以降にアップデートしてください。`
+      };
+    }
+    
+    // iOSではPWAモードでのみプッシュ通知が利用可能
+    if (!isStandalonePWA()) {
+      return {
+        ...result,
+        error: 'iOSではホーム画面に追加したアプリからのみプッシュ通知が利用できます。'
       };
     }
     
