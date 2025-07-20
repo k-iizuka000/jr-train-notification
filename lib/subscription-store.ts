@@ -2,9 +2,9 @@ import type { PushSubscriptionData } from '@/types';
 import fs from 'fs/promises';
 import path from 'path';
 
-// 開発環境では一時ディレクトリ、本番環境では永続的なストレージを使用
+// 開発環境では一時ディレクトリ、本番環境ではVercelの/tmpを使用
 const STORAGE_PATH = process.env.NODE_ENV === 'production' 
-  ? '/var/data/subscriptions.json'  // 本番環境では適切なパスに変更
+  ? '/tmp/subscriptions.json'  // Vercelでは/tmpディレクトリを使用
   : path.join(process.cwd(), '.temp', 'subscriptions.json');
 
 // ストレージディレクトリを確保

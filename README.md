@@ -112,6 +112,18 @@ npm run generate-vapid-keys
 npm run test-api
 ```
 
+## Vercelへのデプロイ
+
+Vercelにデプロイする際は、以下の環境変数を設定してください：
+
+1. Vercelダッシュボードで「Settings」→「Environment Variables」を開く
+2. 以下の環境変数を追加：
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`: 公開鍵
+   - `VAPID_PRIVATE_KEY`: 秘密鍵
+   - `VAPID_SUBJECT`: mailto:your-email@example.com（実際のメールアドレスに置き換え）
+
+**重要**: 本番環境では購読情報は`/tmp`ディレクトリに保存されます。Vercelでは再デプロイ時にデータが失われるため、永続的なストレージが必要な場合は外部データベースの使用を検討してください。
+
 ## 技術スタック
 
 - **フレームワーク**: Next.js 15 (App Router)
