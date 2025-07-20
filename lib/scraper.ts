@@ -106,13 +106,45 @@ export async function scrapeTrainStatus(): Promise<TrainStatus> {
       
       if (isVercel) {
         // Vercel環境用の設定
-        launchOptions = {
-          args: chromium.args,
-          defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
-        };
-        logger.debug('Vercel環境でchrome-aws-lambdaを使用', 'Scraper');
+        try {
+          logger.debug('Chromiumの実行パスを取得中...', 'Scraper');
+          const executablePath = await chromium.executablePath();
+          logger.debug(`Chromium実行パス: ${executablePath}`, 'Scraper');
+          
+          // ファイルシステムの確認
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const fs = require('fs');
+          const pathExists = fs.existsSync(executablePath);
+          logger.debug(`実行ファイルの存在確認: ${pathExists}`, 'Scraper');
+          
+          launchOptions = {
+            args: [
+              ...chromium.args,
+              '--disable-web-security',
+              '--disable-features=IsolateOrigins,site-per-process',
+              '--no-first-run',
+              '--no-default-browser-check',
+              '--disable-blink-features=AutomationControlled'
+            ],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: executablePath,
+            headless: true,
+          };
+          logger.debug('Vercel環境でchrome-aws-lambdaを使用', 'Scraper', {
+            executablePath,
+            args: launchOptions.args?.length || 0,
+            defaultViewport: launchOptions.defaultViewport
+          });
+        } catch (error) {
+          logger.error('Chromium実行パスの取得に失敗', 'Scraper', 
+            error instanceof Error ? error : new Error(String(error)),
+            {
+              errorName: error instanceof Error ? error.name : 'Unknown',
+              errorStack: error instanceof Error ? error.stack : undefined
+            }
+          );
+          throw new Error(`Chromium実行パスの取得に失敗: ${error instanceof Error ? error.message : String(error)}`);
+        }
       } else {
         // ローカル環境用の設定
         launchOptions = {
@@ -134,8 +166,24 @@ export async function scrapeTrainStatus(): Promise<TrainStatus> {
         }
       }
 
-      logger.debug('Puppeteerを起動中...', 'Scraper', { launchOptions, isVercel });
-      browser = await puppeteer.launch(launchOptions);
+      logger.debug('Puppeteerを起動中...', 'Scraper', { 
+        launchOptions: {
+          ...launchOptions,
+          executablePath: launchOptions.executablePath ? '[SET]' : '[UNSET]'
+        }, 
+        isVercel 
+      });
+      
+      try {
+        browser = await puppeteer.launch(launchOptions);
+        logger.debug('Puppeteerの起動に成功', 'Scraper');
+      } catch (launchError) {
+        logger.error('Puppeteerの起動に失敗', 'Scraper',
+          launchError instanceof Error ? launchError : new Error(String(launchError)),
+          { isVercel, nodeVersion: process.version }
+        );
+        throw launchError;
+      }
       
       const statusText = await scrapeWithBrowser(browser!);
       
