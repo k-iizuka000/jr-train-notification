@@ -1,5 +1,5 @@
 import type { PushSubscriptionData } from '@/types';
-import { urlBase64ToUint8Array as vapidUrlBase64ToUint8Array } from '@/utils/vapid-helper';
+import { urlBase64ToUint8Array as vapidUrlBase64ToUint8Array, urlBase64ToUint8ArrayAlternative } from '@/utils/vapid-helper';
 import { isIOS, checkPushNotificationSupport } from '@/utils/platform-detector';
 
 // Service Worker のサポート確認
@@ -122,10 +122,35 @@ export async function subscribeToPushNotifications(
       };
     }
 
+    // VAPID鍵の変換（iOSの場合は追加のデバッグ情報を出力）
+    let applicationServerKey: Uint8Array;
+    try {
+      applicationServerKey = vapidUrlBase64ToUint8Array(vapidPublicKey);
+      if (isIOS()) {
+        console.log('VAPID鍵変換成功（標準方式）');
+        console.log('変換後のバイト長:', applicationServerKey.length);
+      }
+    } catch (error) {
+      // 標準的な変換が失敗した場合、代替方式を試す
+      if (isIOS()) {
+        console.warn('標準的なVAPID鍵変換が失敗しました。代替方式を試します。');
+        try {
+          applicationServerKey = urlBase64ToUint8ArrayAlternative(vapidPublicKey);
+          console.log('VAPID鍵変換成功（代替方式）');
+          console.log('変換後のバイト長:', applicationServerKey.length);
+        } catch (altError) {
+          console.error('代替方式でもVAPID鍵変換に失敗しました:', altError);
+          throw error; // 元のエラーを再スロー
+        }
+      } else {
+        throw error;
+      }
+    }
+
     // 新規購読
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: vapidUrlBase64ToUint8Array(vapidPublicKey)
+      applicationServerKey: applicationServerKey
     });
 
     console.log('プッシュ通知購読成功');
@@ -144,6 +169,9 @@ export async function subscribeToPushNotifications(
     if (isIOS() && error instanceof Error) {
       if (error.message.includes('string did not match')) {
         console.error('iOS VAPID鍵エラー: applicationServerKeyの形式が不正です');
+        console.error('VAPID公開鍵:', vapidPublicKey);
+        console.error('鍵の長さ:', vapidPublicKey.length);
+        console.error('エラーメッセージ:', error.message);
       }
     }
     

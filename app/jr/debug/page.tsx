@@ -319,6 +319,7 @@ export default function DebugPage() {
                             開始: {vapidValidation.debugInfo.firstChars} ... 終了: {vapidValidation.debugInfo.lastChars}
                           </p>
                         )}
+                        <p><span className="font-medium">パディング:</span> {vapidValidation.debugInfo.hasPadding ? `あり (${vapidValidation.debugInfo.paddingCount}個の=)` : 'なし'}</p>
                         <details className="mt-2">
                           <summary className="cursor-pointer text-blue-600">公開鍵を表示</summary>
                           <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">

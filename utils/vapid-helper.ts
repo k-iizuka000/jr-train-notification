@@ -15,12 +15,10 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
     throw new Error('VAPID公開鍵が空です');
   }
 
-  // iOS Safari対策: 末尾の=を削除
-  const cleanedBase64 = base64String.replace(/=/g, '');
-  
-  // パディングを追加（4の倍数になるように）
-  const padding = '='.repeat((4 - (cleanedBase64.length % 4)) % 4);
-  const base64 = (cleanedBase64 + padding)
+  // iOS Safari互換性のための処理
+  // 標準的な方法：パディングを追加（末尾の=を削除しない）
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
     .replace(/\-/g, '+')
     .replace(/_/g, '/');
 
@@ -40,10 +38,50 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
       throw new Error('VAPID鍵の変換結果が空です');
     }
 
+    // iOS Safari向けの追加検証
+    if (outputArray.length !== 65) {
+      console.warn(`VAPID鍵のバイト長が期待値と異なります。期待値: 65, 実際: ${outputArray.length}`);
+    }
+
     return outputArray;
   } catch (error) {
     console.error('VAPID鍵の変換エラー:', error);
     throw new Error('VAPID公開鍵の形式が不正です。URLBase64形式であることを確認してください。');
+  }
+}
+
+/**
+ * iOS Safari向けの代替変換関数
+ * 一部のVAPID鍵形式で問題が発生する場合の代替手段
+ * @param base64String - URLBase64形式の文字列
+ * @returns Uint8Array
+ */
+export function urlBase64ToUint8ArrayAlternative(base64String: string): Uint8Array {
+  // 末尾の=を含む場合と含まない場合の両方を試す
+  const base64WithoutPadding = base64String.replace(/=+$/, '');
+  
+  // URL-safe base64をstandard base64に変換
+  const base64 = base64WithoutPadding
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+    
+  // 必要に応じてパディングを追加
+  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+  
+  try {
+    const rawData = typeof window !== 'undefined' 
+      ? window.atob(padded)
+      : Buffer.from(padded, 'base64').toString('binary');
+    
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    
+    return outputArray;
+  } catch (error) {
+    console.error('代替VAPID鍵変換エラー:', error);
+    throw new Error('VAPID公開鍵の変換に失敗しました');
   }
 }
 
@@ -115,13 +153,17 @@ export function getVapidKeyDebugInfo(publicKey: string): {
   rawValue?: string;
   firstChars?: string;
   lastChars?: string;
+  hasPadding?: boolean;
+  paddingCount?: number;
 } {
   const info = {
     length: publicKey.length,
     hasValidCharacters: /^[A-Za-z0-9\-_=]+$/.test(publicKey),
     rawValue: publicKey.substring(0, 20) + '...',
     firstChars: publicKey.substring(0, 10),
-    lastChars: publicKey.substring(publicKey.length - 10)
+    lastChars: publicKey.substring(publicKey.length - 10),
+    hasPadding: publicKey.includes('='),
+    paddingCount: (publicKey.match(/=/g) || []).length
   };
 
   try {
