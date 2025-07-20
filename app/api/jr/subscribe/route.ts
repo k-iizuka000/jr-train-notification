@@ -13,6 +13,10 @@ export async function POST(request: NextRequest) {
   console.log('リクエストヘッダー:', Object.fromEntries(request.headers.entries()));
   
   try {
+    // 生のリクエストボディを取得してログ出力
+    const rawBody = await request.text();
+    console.log('生のリクエストボディ:', rawBody);
+    
     // Content-Typeヘッダーを確認
     const contentType = request.headers.get('content-type');
     console.log('Content-Type:', contentType);
@@ -32,10 +36,11 @@ export async function POST(request: NextRequest) {
     // リクエストボディを取得
     let body: SubscribeRequest;
     try {
-      body = await request.json();
+      body = JSON.parse(rawBody);
+      console.log('パースされた購読オブジェクト:', JSON.stringify(body, null, 2));
     } catch (e) {
       console.error('JSONパースエラー:', e);
-      console.error('リクエストヘッダー:', Object.fromEntries(request.headers.entries()));
+      console.error('生のボディ:', rawBody);
       return createApiError(
         'INVALID_REQUEST',
         'Invalid JSON in request body',
@@ -47,7 +52,13 @@ export async function POST(request: NextRequest) {
     }
     
     // 購読情報の検証
+    console.log('購読情報の検証開始...');
     if (!body.subscription || !body.subscription.endpoint || !body.subscription.keys) {
+      console.error('購読情報が不完全:', {
+        hasSubscription: !!body.subscription,
+        hasEndpoint: !!(body.subscription && body.subscription.endpoint),
+        hasKeys: !!(body.subscription && body.subscription.keys)
+      });
       return createApiError(
         'INVALID_REQUEST',
         '購読情報が不正です。',
@@ -56,6 +67,13 @@ export async function POST(request: NextRequest) {
     }
     
     // iOS向けの追加検証
+    console.log('購読キーの詳細:', {
+      p256dh: body.subscription.keys.p256dh ? `${body.subscription.keys.p256dh.substring(0, 20)}...` : 'なし',
+      auth: body.subscription.keys.auth ? `${body.subscription.keys.auth.substring(0, 20)}...` : 'なし',
+      p256dhLength: body.subscription.keys.p256dh ? body.subscription.keys.p256dh.length : 0,
+      authLength: body.subscription.keys.auth ? body.subscription.keys.auth.length : 0
+    });
+    
     if (body.subscription.keys.p256dh && body.subscription.keys.auth) {
       // キーの長さをチェック
       if (body.subscription.keys.p256dh.length < 10 || body.subscription.keys.auth.length < 10) {
@@ -110,16 +128,28 @@ export async function POST(request: NextRequest) {
     // テスト通知を送信
     try {
       console.log('テスト通知を送信中...');
+      console.log('送信する購読情報:', {
+        endpoint: body.subscription.endpoint,
+        keysPresent: {
+          p256dh: !!body.subscription.keys.p256dh,
+          auth: !!body.subscription.keys.auth
+        }
+      });
+      
       await sendTestNotification(body.subscription);
       console.log('テスト通知の送信完了');
     } catch (error) {
       // テスト通知の送信に失敗しても購読登録は成功とする
       console.error('テスト通知の送信に失敗しました:', error);
+      console.error('エラーの型:', error?.constructor?.name);
+      console.error('エラースタック:', error instanceof Error ? error.stack : 'スタックなし');
       
       if (error instanceof PushNotificationError) {
         console.error('PushNotificationError詳細:', {
           message: error.message,
-          originalError: error.originalError
+          originalError: error.originalError,
+          originalErrorName: error.originalError?.constructor?.name,
+          originalErrorMessage: error.originalError instanceof Error ? error.originalError.message : 'メッセージなし'
         });
         
         if (error.message.includes('無効')) {
@@ -152,8 +182,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('=== 購読登録エラー ===');
+    console.error('=== 購読登録エラー（最外側のcatch） ===');
     console.error('エラー:', error);
+    console.error('エラーの型:', error?.constructor?.name);
     
     // エラーの詳細をログに記録
     if (error instanceof Error) {
@@ -162,19 +193,37 @@ export async function POST(request: NextRequest) {
         message: error.message,
         stack: error.stack
       });
+    } else {
+      console.error('Error以外のオブジェクト:', JSON.stringify(error, null, 2));
     }
     
-    const errorResponse = createApiError(
-      'SUBSCRIPTION_ERROR',
-      error instanceof Error ? error.message : 'プッシュ通知の購読に失敗しました。',
-      500,
-      {
-        'Content-Type': 'application/json',
-      }
-    );
-    
-    console.log('=== エラーレスポンス送信 ===');
-    return errorResponse;
+    try {
+      const errorResponse = createApiError(
+        'SUBSCRIPTION_ERROR',
+        error instanceof Error ? error.message : 'プッシュ通知の購読に失敗しました。',
+        500,
+        {
+          'Content-Type': 'application/json',
+        }
+      );
+      
+      console.log('=== エラーレスポンス作成成功 ===');
+      console.log('レスポンスステータス:', 500);
+      return errorResponse;
+    } catch (responseError) {
+      console.error('=== エラーレスポンス作成中にエラー ===', responseError);
+      // 最後の手段として、基本的なエラーレスポンスを返す
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'サーバーエラーが発生しました'
+      }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+    }
   }
 }
 
