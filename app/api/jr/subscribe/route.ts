@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { subscriptionStore } from '@/lib/subscription-store';
 import { sendTestNotification, PushNotificationError } from '@/lib/push-notification';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
+import { validateVapidPublicKey } from '@/utils/vapid-helper';
 import type { SubscribeRequest } from '@/types';
 
 // Vercel Runtime設定
@@ -45,11 +46,42 @@ export async function POST(request: NextRequest) {
         400
       );
     }
+    
+    // iOS向けの追加検証
+    if (body.subscription.keys.p256dh && body.subscription.keys.auth) {
+      // キーの長さをチェック
+      if (body.subscription.keys.p256dh.length < 10 || body.subscription.keys.auth.length < 10) {
+        console.error('購読キーが短すぎます:', {
+          p256dhLength: body.subscription.keys.p256dh.length,
+          authLength: body.subscription.keys.auth.length
+        });
+        return createApiError(
+          'INVALID_SUBSCRIPTION',
+          '購読キーが無効です。ブラウザを再起動してもう一度お試しください。',
+          400
+        );
+      }
+    }
 
+    // VAPID公開鍵の検証
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (vapidPublicKey) {
+      const validation = validateVapidPublicKey(vapidPublicKey);
+      if (!validation.isValid) {
+        console.error('VAPID公開鍵が無効です:', validation.error);
+        return createApiError(
+          'CONFIGURATION_ERROR',
+          'サーバー設定エラー: VAPID公開鍵が無効です。',
+          500
+        );
+      }
+    }
+    
     // 購読情報を保存
     console.log('購読情報を保存中...', {
       endpoint: body.subscription.endpoint,
-      hasKeys: !!body.subscription.keys
+      hasKeys: !!body.subscription.keys,
+      userAgent: request.headers.get('user-agent') || 'unknown'
     });
     
     await subscriptionStore.addSubscription(body.subscription);
@@ -73,9 +105,16 @@ export async function POST(request: NextRequest) {
         if (error.message.includes('無効')) {
           // 無効な購読の場合は削除して失敗を返す
           await subscriptionStore.removeSubscription(body.subscription.endpoint);
+          
+          // iOS向けの詳細なエラーメッセージ
+          const userAgent = request.headers.get('user-agent') || '';
+          const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+          
           return createApiError(
             'INVALID_SUBSCRIPTION',
-            '購読情報が無効です。ブラウザの通知設定を確認してください。',
+            isIOS 
+              ? 'iOSで通知の購読に失敗しました。Safariの設定から「Webサイトの通知」を許可し、ブラウザを再起動してください。'
+              : '購読情報が無効です。ブラウザの通知設定を確認してください。',
             400,
             {
               'Content-Type': 'application/json',

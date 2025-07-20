@@ -19,6 +19,7 @@ export interface NotificationPayload {
   data?: {
     status: string;
     timestamp: string;
+    url?: string;
   };
 }
 
@@ -34,4 +35,5 @@ export interface NotifyRequest {
   title: string;
   body: string;
   status: string;
+  url?: string;
 }

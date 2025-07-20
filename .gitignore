@@ -231,7 +231,9 @@ $RECYCLE.BIN/
 *.lnk
 
 
+.claude/
 
-
-CLAUDE.md
+CLAUDE*.md
 HANDOVER.md
+.kiro/
+tests/

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { logger, LogLevel, LogEntry } from '@/lib/logger';
 import { errorHandler } from '@/lib/error-handler';
+import { getDeviceInfo } from '@/utils/platform-detector';
+import { validateVapidPublicKey, getVapidKeyDebugInfo } from '@/utils/vapid-helper';
 
 export default function DebugPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -12,6 +14,14 @@ export default function DebugPage() {
   const [debugInfo, setDebugInfo] = useState<ReturnType<typeof logger.getDebugInfo> | null>(null);
   const [logLevel, setLogLevel] = useState<LogLevel>(LogLevel.INFO);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [activeTab, setActiveTab] = useState<'logs' | 'errors' | 'history' | 'device'>('logs');
+  const [deviceInfo, setDeviceInfo] = useState<ReturnType<typeof getDeviceInfo> | null>(null);
+  const [vapidValidation, setVapidValidation] = useState<{
+    isValid: boolean;
+    error?: string;
+    debugInfo: ReturnType<typeof getVapidKeyDebugInfo>;
+    publicKey: string;
+  } | null>(null);
 
   // データを更新
   const refreshData = () => {
@@ -24,6 +34,21 @@ export default function DebugPage() {
   // 定期更新
   useEffect(() => {
     refreshData();
+    
+    // デバイス情報を取得
+    setDeviceInfo(getDeviceInfo());
+    
+    // VAPID鍵の検証
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (vapidPublicKey) {
+      const validation = validateVapidPublicKey(vapidPublicKey);
+      const debugInfo = getVapidKeyDebugInfo(vapidPublicKey);
+      setVapidValidation({
+        ...validation,
+        debugInfo,
+        publicKey: vapidPublicKey
+      });
+    }
     
     if (autoRefresh) {
       const interval = setInterval(refreshData, 2000);
@@ -163,58 +188,150 @@ export default function DebugPage() {
           <div className="border-b">
             <nav className="flex -mb-px">
               <button
-                className="px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600"
+                onClick={() => setActiveTab('logs')}
+                className={`px-6 py-3 text-sm font-medium ${
+                  activeTab === 'logs'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
               >
                 システムログ
               </button>
               <button
-                className="px-6 py-3 text-sm font-medium text-gray-600 hover:text-gray-800"
+                onClick={() => setActiveTab('errors')}
+                className={`px-6 py-3 text-sm font-medium ${
+                  activeTab === 'errors'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
               >
                 エラーログ
               </button>
               <button
-                className="px-6 py-3 text-sm font-medium text-gray-600 hover:text-gray-800"
+                onClick={() => setActiveTab('history')}
+                className={`px-6 py-3 text-sm font-medium ${
+                  activeTab === 'history'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
               >
                 状態履歴
+              </button>
+              <button
+                onClick={() => setActiveTab('device')}
+                className={`px-6 py-3 text-sm font-medium ${
+                  activeTab === 'device'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                デバイス情報
               </button>
             </nav>
           </div>
 
-          {/* ログ表示 */}
+          {/* タブコンテンツ */}
           <div className="p-4">
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {logs.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">ログがありません</p>
-              ) : (
-                logs.map((log, index) => (
-                  <div key={index} className="text-xs font-mono">
-                    <span className="text-gray-500">
-                      {log.timestamp.toLocaleTimeString('ja-JP')}
-                    </span>
-                    {' '}
-                    <span className={`font-semibold ${getLogLevelColor(log.level)}`}>
-                      [{LogLevel[log.level]}]
-                    </span>
-                    {log.context && (
-                      <>
-                        {' '}
-                        <span className="text-purple-600">[{log.context}]</span>
-                      </>
-                    )}
-                    {' '}
-                    <span className="text-gray-800">{log.message}</span>
-                    {log.data !== undefined && log.data !== null && (
-                      <details className="ml-4 mt-1">
-                        <summary className="cursor-pointer text-gray-600">データ</summary>
-                        <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
-                          {JSON.stringify(log.data, null, 2)}
-                        </pre>
-                      </details>
+            {activeTab === 'logs' && (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {logs.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">ログがありません</p>
+                ) : (
+                  logs.map((log, index) => (
+                    <div key={index} className="text-xs font-mono">
+                      <span className="text-gray-500">
+                        {log.timestamp.toLocaleTimeString('ja-JP')}
+                      </span>
+                      {' '}
+                      <span className={`font-semibold ${getLogLevelColor(log.level)}`}>
+                        [{LogLevel[log.level]}]
+                      </span>
+                      {log.context && (
+                        <>
+                          {' '}
+                          <span className="text-purple-600">[{log.context}]</span>
+                        </>
+                      )}
+                      {' '}
+                      <span className="text-gray-800">{log.message}</span>
+                      {log.data !== undefined && log.data !== null && (
+                        <details className="ml-4 mt-1">
+                          <summary className="cursor-pointer text-gray-600">データ</summary>
+                          <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                            {JSON.stringify(log.data, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'device' && deviceInfo && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">プラットフォーム情報</h3>
+                  <div className="bg-gray-50 p-3 rounded space-y-1 text-sm">
+                    <p><span className="font-medium">Platform:</span> {deviceInfo.platform}</p>
+                    <p><span className="font-medium">iOS:</span> {deviceInfo.isIOS ? 'はい' : 'いいえ'}</p>
+                    <p><span className="font-medium">Safari:</span> {deviceInfo.isSafari ? 'はい' : 'いいえ'}</p>
+                    <p><span className="font-medium">PWA:</span> {deviceInfo.isStandalone ? 'はい' : 'いいえ'}</p>
+                    {deviceInfo.iosVersion && (
+                      <p><span className="font-medium">iOS バージョン:</span> {deviceInfo.iosVersion}</p>
                     )}
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">プッシュ通知サポート</h3>
+                  <div className="bg-gray-50 p-3 rounded space-y-1 text-sm">
+                    <p><span className="font-medium">サポート:</span> {deviceInfo.pushSupport.isSupported ? '✅ はい' : '❌ いいえ'}</p>
+                    <p><span className="font-medium">Service Worker:</span> {deviceInfo.pushSupport.hasServiceWorker ? '✅' : '❌'}</p>
+                    <p><span className="font-medium">Push Manager:</span> {deviceInfo.pushSupport.hasPushManager ? '✅' : '❌'}</p>
+                    <p><span className="font-medium">Notification API:</span> {deviceInfo.pushSupport.hasNotificationAPI ? '✅' : '❌'}</p>
+                    <p><span className="font-medium">ユーザー操作必須:</span> {deviceInfo.pushSupport.requiresUserInteraction ? 'はい' : 'いいえ'}</p>
+                    {deviceInfo.pushSupport.error && (
+                      <p className="text-red-600"><span className="font-medium">エラー:</span> {deviceInfo.pushSupport.error}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">VAPID鍵検証</h3>
+                  <div className="bg-gray-50 p-3 rounded space-y-1 text-sm">
+                    {vapidValidation ? (
+                      <>
+                        <p><span className="font-medium">検証結果:</span> {vapidValidation.isValid ? '✅ 有効' : '❌ 無効'}</p>
+                        {vapidValidation.error && (
+                          <p className="text-red-600"><span className="font-medium">エラー:</span> {vapidValidation.error}</p>
+                        )}
+                        <p><span className="font-medium">鍵の長さ:</span> {vapidValidation.debugInfo.length}文字</p>
+                        <p><span className="font-medium">有効な文字:</span> {vapidValidation.debugInfo.hasValidCharacters ? '✅' : '❌'}</p>
+                        {vapidValidation.debugInfo.byteLength && (
+                          <p><span className="font-medium">バイト長:</span> {vapidValidation.debugInfo.byteLength}</p>
+                        )}
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-blue-600">公開鍵を表示</summary>
+                          <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                            {vapidValidation.publicKey}
+                          </pre>
+                        </details>
+                      </>
+                    ) : (
+                      <p className="text-red-600">VAPID鍵が設定されていません</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">User Agent</h3>
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="text-xs break-all">{deviceInfo.userAgent}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

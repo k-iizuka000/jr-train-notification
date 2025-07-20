@@ -53,12 +53,24 @@ export async function POST(request: NextRequest) {
     // カスタムタイトル・本文がある場合は上書き
     notification.title = body.title;
     notification.body = body.body;
+    
+    // iOS向けの最適化
+    // iOS16.4以降では、通知オプションの一部が異なる扱いをされる
+    if (notification.data) {
+      notification.data = {
+        ...notification.data,
+        timestamp: new Date().toISOString(),
+        url: body.url || '/jr'
+      };
+    }
 
     // 全購読者に通知を送信
+    console.log(`${subscriptions.length}件の購読者に通知を送信します...`);
     const result = await sendPushNotificationToAll(subscriptions, notification);
 
     // 無効な購読を削除
     if (result.invalidSubscriptions.length > 0) {
+      console.log(`${result.invalidSubscriptions.length}件の無効な購読を削除します`);
       await subscriptionStore.removeInvalidSubscriptions(result.invalidSubscriptions);
     }
 

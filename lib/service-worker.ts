@@ -1,4 +1,6 @@
 import type { PushSubscriptionData } from '@/types';
+import { urlBase64ToUint8Array as vapidUrlBase64ToUint8Array } from '@/utils/vapid-helper';
+import { isIOS, checkPushNotificationSupport } from '@/utils/platform-detector';
 
 // Service Worker のサポート確認
 export function isServiceWorkerSupported(): boolean {
@@ -7,7 +9,10 @@ export function isServiceWorkerSupported(): boolean {
 
 // プッシュ通知のサポート確認
 export function isPushNotificationSupported(): boolean {
-  return typeof window !== 'undefined' && 'PushManager' in window && isServiceWorkerSupported();
+  if (typeof window === 'undefined') return false;
+  
+  const support = checkPushNotificationSupport();
+  return support.isSupported;
 }
 
 // 通知の許可状態を取得
@@ -79,6 +84,11 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
 
   try {
+    // iOSの場合は特別な注意メッセージを表示
+    if (isIOS()) {
+      console.log('iOS端末で通知許可をリクエストしています...');
+    }
+    
     const permission = await Notification.requestPermission();
     console.log('通知許可:', permission);
     return permission;
@@ -115,7 +125,7 @@ export async function subscribeToPushNotifications(
     // 新規購読
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+      applicationServerKey: vapidUrlBase64ToUint8Array(vapidPublicKey)
     });
 
     console.log('プッシュ通知購読成功');
@@ -129,6 +139,14 @@ export async function subscribeToPushNotifications(
     };
   } catch (error) {
     console.error('プッシュ通知購読エラー:', error);
+    
+    // iOS向けの詳細なエラーメッセージ
+    if (isIOS() && error instanceof Error) {
+      if (error.message.includes('string did not match')) {
+        console.error('iOS VAPID鍵エラー: applicationServerKeyの形式が不正です');
+      }
+    }
+    
     return null;
   }
 }
@@ -176,21 +194,6 @@ export async function getCurrentSubscription(
   }
 }
 
-// ユーティリティ関数: Base64 URL エンコードされた文字列を Uint8Array に変換
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
 
 // ユーティリティ関数: ArrayBuffer を Base64 文字列に変換
 function arrayBufferToBase64(buffer: ArrayBuffer): string {

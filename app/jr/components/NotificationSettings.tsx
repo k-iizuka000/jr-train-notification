@@ -10,6 +10,8 @@ import {
   isPushNotificationSupported,
   getNotificationPermission
 } from '@/lib/service-worker';
+import { validateVapidPublicKey, getVapidKeyDebugInfo } from '@/utils/vapid-helper';
+import { isIOS, getDeviceInfo } from '@/utils/platform-detector';
 
 // VAPID公開鍵（環境変数から取得）
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -29,6 +31,19 @@ export default function NotificationSettings() {
       if (!VAPID_PUBLIC_KEY) {
         console.error('VAPID公開鍵が設定されていません');
         setError('通知機能を使用するには、環境変数NEXT_PUBLIC_VAPID_PUBLIC_KEYを設定してください');
+      } else {
+        // VAPID鍵の検証
+        const validation = validateVapidPublicKey(VAPID_PUBLIC_KEY);
+        if (!validation.isValid) {
+          console.error('VAPID鍵検証エラー:', validation.error);
+          console.error('VAPID鍵デバッグ情報:', getVapidKeyDebugInfo(VAPID_PUBLIC_KEY));
+        }
+      }
+      
+      // デバイス情報をログ出力（デバッグ用）
+      if (isIOS()) {
+        console.log('iOS端末を検出しました');
+        console.log('デバイス情報:', getDeviceInfo());
       }
       
       // プッシュ通知のサポート確認
@@ -109,7 +124,19 @@ export default function NotificationSettings() {
       setError(null);
     } catch (err) {
       console.error('通知有効化エラー:', err);
-      setError(err instanceof Error ? err.message : '通知の有効化に失敗しました');
+      
+      // iOS向けの詳細なエラーメッセージ
+      if (isIOS() && err instanceof Error) {
+        if (err.message.includes('string did not match')) {
+          setError('iPhoneでの通知設定にエラーが発生しました。ブラウザを再起動してもう一度お試しください。');
+        } else if (err.message.includes('permission')) {
+          setError('通知の許可が必要です。Safariの設定から「Webサイトの通知」を許可してください。');
+        } else {
+          setError(`エラー: ${err.message}`);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : '通知の有効化に失敗しました');
+      }
     } finally {
       setLoading(false);
     }
@@ -285,9 +312,16 @@ export default function NotificationSettings() {
         )}
         
         {permission === 'denied' && (
-          <p className="text-sm text-red-600">
-            通知がブロックされています。ブラウザの設定から通知を許可してください。
-          </p>
+          <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
+            <p className="text-sm text-yellow-700 font-semibold">
+              通知がブロックされています
+            </p>
+            <p className="text-sm text-yellow-600 mt-1">
+              {isIOS() 
+                ? 'Safariの設定 → 「Webサイトの設定」→「通知」から、このサイトの通知を許可してください。'
+                : 'ブラウザの設定から通知を許可してください。'}
+            </p>
+          </div>
         )}
       </div>
     </div>
