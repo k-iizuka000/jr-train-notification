@@ -13,6 +13,9 @@ export interface NotificationPayload {
   body: string;
   icon?: string;
   badge?: string;
+  url?: string;
+  tag?: string;
+  requireInteraction?: boolean;
   data?: {
     status: string;
     timestamp: string;
