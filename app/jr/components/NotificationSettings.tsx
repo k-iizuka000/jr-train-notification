@@ -12,6 +12,7 @@ import {
 } from '@/lib/service-worker';
 import { validateVapidPublicKey, getVapidKeyDebugInfo } from '@/utils/vapid-helper';
 import { isIOS, getDeviceInfo, isStandalonePWA } from '@/utils/platform-detector';
+import NotificationDebugButton from './NotificationDebugButton';
 
 // VAPID公開鍵（環境変数から取得）
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -132,6 +133,12 @@ export default function NotificationSettings() {
       }
       
       // 4. サーバーに購読情報を送信
+      console.log('サーバーに購読情報を送信中...');
+      console.log('購読情報:', {
+        endpoint: subscription.endpoint,
+        keys: subscription.keys ? 'あり' : 'なし'
+      });
+      
       const response = await fetch('/api/jr/subscribe', {
         method: 'POST',
         headers: {
@@ -142,9 +149,19 @@ export default function NotificationSettings() {
         }),
       });
       
-      const data = await response.json();
+      console.log('サーバーレスポンス:', response.status);
       
-      if (!data.success) {
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('レスポンスのJSONパースエラー:', jsonError);
+        const text = await response.text();
+        console.error('レスポンステキスト:', text);
+        throw new Error('サーバーからの応答が不正です');
+      }
+      
+      if (!response.ok || !data.success) {
         throw new Error(data.error || '購読登録に失敗しました');
       }
       
@@ -362,6 +379,11 @@ export default function NotificationSettings() {
               ブラウザから直接アクセスした場合、プッシュ通知は利用できません。
             </p>
           </div>
+        )}
+        
+        {/* デバッグツール（iOSかつエラーがある場合のみ表示） */}
+        {isIOS() && error && error.includes('エラー') && (
+          <NotificationDebugButton />
         )}
       </div>
     </div>

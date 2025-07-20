@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch (e) {
+      console.error('JSONパースエラー:', e);
+      console.error('リクエストヘッダー:', Object.fromEntries(request.headers.entries()));
       return createApiError(
         'INVALID_REQUEST',
         'Invalid JSON in request body',
