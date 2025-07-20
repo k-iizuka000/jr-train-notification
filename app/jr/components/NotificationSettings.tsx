@@ -281,6 +281,10 @@ export default function NotificationSettings() {
       }
       
       // テスト通知をスケジュール
+      console.log('テスト通知をスケジュール中...', {
+        endpoint: subscription.endpoint
+      });
+      
       const response = await fetch('/api/jr/test-notification', {
         method: 'POST',
         headers: {
@@ -291,13 +295,50 @@ export default function NotificationSettings() {
         }),
       });
       
-      const data = await response.json();
+      console.log('テスト通知レスポンス:', response.status);
+      console.log('レスポンスContent-Type:', response.headers.get('content-type'));
       
-      if (!data.success) {
-        throw new Error(data.error || 'テスト通知の送信に失敗しました');
+      // レスポンスのContent-Typeを確認
+      const contentType = response.headers.get('content-type');
+      
+      if (!response.ok) {
+        let errorMessage = 'テスト通知の送信に失敗しました';
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (jsonError) {
+            console.error('エラーレスポンスのJSONパースエラー:', jsonError);
+          }
+        } else {
+          // JSONでない場合はテキストとして読み取る
+          try {
+            const errorText = await response.text();
+            console.error('エラーレスポンス（非JSON）:', errorText);
+          } catch (textError) {
+            console.error('エラーレスポンスの読み取りエラー:', textError);
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
       
-      setError('1分後にテスト通知が送信されます。');
+      // 成功時のJSONパース
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('成功レスポンスのJSONパースエラー:', jsonError);
+        throw new Error('サーバーからの応答が不正です');
+      }
+      
+      if (!data.success) {
+        throw new Error(data.message || data.error || 'テスト通知の送信に失敗しました');
+      }
+      
+      // 成功メッセージを表示（エラーではなく成功メッセージとして）
+      alert(data.message || '1分後にテスト通知が送信されます。');
     } catch (err) {
       console.error('テスト通知エラー:', err);
       setError(err instanceof Error ? err.message : 'テスト通知の送信に失敗しました');

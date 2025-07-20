@@ -7,29 +7,59 @@ import { createApiResponse, createApiError } from '@/lib/api-helpers';
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  console.log('=== /api/jr/test-notification POST開始 ===');
+  
   try {
     // リクエストボディを取得
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+      console.log('リクエストボディ:', JSON.stringify(body, null, 2));
+    } catch (jsonError) {
+      console.error('JSONパースエラー:', jsonError);
+      return createApiError(
+        'INVALID_REQUEST',
+        'リクエストボディが不正です。',
+        400,
+        {
+          'Content-Type': 'application/json',
+        }
+      );
+    }
     
     // エンドポイントの検証
     if (!body.endpoint) {
+      console.error('エンドポイントが指定されていません:', body);
       return createApiError(
         'INVALID_REQUEST',
         'エンドポイントが指定されていません。',
-        400
+        400,
+        {
+          'Content-Type': 'application/json',
+        }
       );
     }
 
     // 購読情報を取得
+    console.log('購読情報を取得中:', body.endpoint);
     const subscription = await subscriptionStore.getSubscription(body.endpoint);
     
     if (!subscription) {
+      console.error('購読情報が見つかりません:', body.endpoint);
       return createApiError(
         'SUBSCRIPTION_NOT_FOUND',
         '購読情報が見つかりません。',
-        404
+        404,
+        {
+          'Content-Type': 'application/json',
+        }
       );
     }
+    
+    console.log('購読情報を取得しました:', {
+      endpoint: subscription.endpoint,
+      hasKeys: !!subscription.keys
+    });
 
     // 1分後にテスト通知を送信するスケジュール
     setTimeout(async () => {
@@ -49,18 +79,36 @@ export async function POST(request: NextRequest) {
       }
     }, 60000); // 60秒 = 1分
 
-    return createApiResponse({
+    const response = createApiResponse({
       message: '1分後にテスト通知を送信します。',
       scheduled: true
+    }, 200, {
+      'Content-Type': 'application/json',
     });
+    
+    console.log('=== テスト通知スケジュール成功 ===');
+    return response;
 
   } catch (error) {
-    console.error('テスト通知スケジュールエラー:', error);
+    console.error('=== テスト通知スケジュールエラー ===');
+    console.error('エラー:', error);
+    console.error('エラーの型:', error?.constructor?.name);
+    
+    if (error instanceof Error) {
+      console.error('エラー詳細:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
     
     return createApiError(
       'NOTIFICATION_ERROR',
-      'テスト通知のスケジュールに失敗しました。',
-      500
+      error instanceof Error ? error.message : 'テスト通知のスケジュールに失敗しました。',
+      500,
+      {
+        'Content-Type': 'application/json',
+      }
     );
   }
 }
