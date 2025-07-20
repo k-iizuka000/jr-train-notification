@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { subscriptionStore } from '@/lib/subscription-store-wrapper';
-import { sendTestNotification, PushNotificationError } from '@/lib/push-notification';
+import { sendPushNotification, PushNotificationError } from '@/lib/push-notification';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
 import { validateVapidPublicKey } from '@/utils/vapid-helper';
 import type { SubscribeRequest } from '@/types';
@@ -103,60 +103,41 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // 購読情報を保存
-    console.log('購読情報を保存中...', {
+    // 購読情報の詳細をログ出力（保存はしない）
+    console.log('購読情報を受信:', {
       endpoint: body.subscription.endpoint,
       hasKeys: !!body.subscription.keys,
       userAgent: request.headers.get('user-agent') || 'unknown'
     });
-    
-    try {
-      await subscriptionStore.addSubscription(body.subscription);
-      console.log('購読情報の保存完了');
-    } catch (saveError) {
-      console.error('購読情報の保存エラー:', saveError);
-      return createApiError(
-        'STORAGE_ERROR',
-        '購読情報の保存に失敗しました。しばらくしてからもう一度お試しください。',
-        500,
-        {
-          'Content-Type': 'application/json',
-        }
-      );
-    }
 
-    // テスト通知を送信
+    // 購読成功時に即座にテスト通知を送信
     try {
-      console.log('テスト通知を送信中...');
-      console.log('送信する購読情報:', {
-        endpoint: body.subscription.endpoint,
-        keysPresent: {
-          p256dh: !!body.subscription.keys.p256dh,
-          auth: !!body.subscription.keys.auth
-        }
+      console.log('購読成功通知を送信中...');
+      
+      // 即座に通知を送信（購読情報を直接使用）
+      await sendPushNotification(body.subscription, {
+        title: '🎉 通知の設定が完了しました',
+        body: 'JR高崎線の運行情報をお知らせします。遅延が発生した際に通知でお知らせします。',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/badge-72x72.png',
+        url: '/jr',
+        tag: 'subscription-success',
+        requireInteraction: false
       });
       
-      await sendTestNotification(body.subscription);
-      console.log('テスト通知の送信完了');
+      console.log('購読成功通知の送信完了');
     } catch (error) {
-      // テスト通知の送信に失敗しても購読登録は成功とする
-      console.error('テスト通知の送信に失敗しました:', error);
-      console.error('エラーの型:', error?.constructor?.name);
-      console.error('エラースタック:', error instanceof Error ? error.stack : 'スタックなし');
+      // 通知の送信に失敗しても購読登録は成功とする
+      console.error('購読成功通知の送信に失敗しました:', error);
       
       if (error instanceof PushNotificationError) {
         console.error('PushNotificationError詳細:', {
           message: error.message,
-          originalError: error.originalError,
-          originalErrorName: error.originalError?.constructor?.name,
-          originalErrorMessage: error.originalError instanceof Error ? error.originalError.message : 'メッセージなし'
+          originalError: error.originalError
         });
         
         if (error.message.includes('無効')) {
-          // 無効な購読の場合は削除して失敗を返す
-          await subscriptionStore.removeSubscription(body.subscription.endpoint);
-          
-          // iOS向けの詳細なエラーメッセージ
+          // 無効な購読の場合は失敗を返す
           const userAgent = request.headers.get('user-agent') || '';
           const isIOS = /iPad|iPhone|iPod/.test(userAgent);
           

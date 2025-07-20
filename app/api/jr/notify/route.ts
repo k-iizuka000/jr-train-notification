@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server';
-import { subscriptionStore } from '@/lib/subscription-store-wrapper';
-import { sendPushNotificationToAll, createStatusChangeNotification } from '@/lib/push-notification';
+import { sendPushNotification, sendPushNotificationToAll, createStatusChangeNotification } from '@/lib/push-notification';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
-import type { NotifyRequest } from '@/types';
+import type { NotifyRequest, PushSubscriptionData } from '@/types';
 
 // Vercel Runtime設定
 export const runtime = 'nodejs';
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // リクエストボディを取得
-    const body: NotifyRequest = await request.json();
+    const body: NotifyRequest & { subscriptions?: PushSubscriptionData[] } = await request.json();
     
     // リクエストの検証
     if (!body.title || !body.body || !body.status) {
@@ -34,10 +33,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 全購読者を取得
-    const subscriptions = await subscriptionStore.getAllSubscriptions();
+    // 購読情報を取得（リクエストで渡された場合はそれを使用）
+    const subscriptions = body.subscriptions || [];
     
     if (subscriptions.length === 0) {
+      console.log('通知対象の購読者が指定されていません。');
       return createApiResponse({
         message: '通知対象の購読者が存在しません。',
         totalSubscribers: 0,
@@ -68,10 +68,9 @@ export async function POST(request: NextRequest) {
     console.log(`${subscriptions.length}件の購読者に通知を送信します...`);
     const result = await sendPushNotificationToAll(subscriptions, notification);
 
-    // 無効な購読を削除
+    // 無効な購読があった場合はログに記録（削除はしない）
     if (result.invalidSubscriptions.length > 0) {
-      console.log(`${result.invalidSubscriptions.length}件の無効な購読を削除します`);
-      await subscriptionStore.removeInvalidSubscriptions(result.invalidSubscriptions);
+      console.log(`${result.invalidSubscriptions.length}件の無効な購読がありました:`, result.invalidSubscriptions);
     }
 
     return createApiResponse({

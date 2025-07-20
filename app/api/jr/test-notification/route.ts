@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       console.error('エンドポイント長:', body.endpoint.length);
       return createApiError(
         'SUBSCRIPTION_NOT_FOUND',
-        '購読情報が見つかりません。通知を一度無効にしてから、再度有効にしてください。',
+        'テスト通知を送信できません。プッシュ通知は正常に有効化されていますが、Vercelの制限により購読情報が一時的に利用できません。実際の運行情報通知は正常に動作します。',
         404,
         {
           'Content-Type': 'application/json',

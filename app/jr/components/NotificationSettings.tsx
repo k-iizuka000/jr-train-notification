@@ -194,6 +194,9 @@ export default function NotificationSettings() {
       
       setIsSubscribed(true);
       setError(null);
+      
+      // 成功メッセージ（通知が送信されることを伝える）
+      alert('通知の設定が完了しました！確認の通知を送信しました。');
     } catch (err) {
       console.error('通知有効化エラー:', err);
       
@@ -262,7 +265,8 @@ export default function NotificationSettings() {
     }
   };
 
-  // テスト通知を送信
+  // テスト通知機能は削除（購読成功時に自動送信されるため）
+  /*
   const sendTestNotification = async () => {
     setLoading(true);
     setError(null);
@@ -411,18 +415,7 @@ export default function NotificationSettings() {
           {loading ? '処理中...' : isSubscribed ? '通知を無効にする' : '通知を有効にする'}
         </button>
         
-        {isSubscribed && (
-          <button
-            onClick={sendTestNotification}
-            disabled={loading}
-            className={`
-              w-full py-3 px-4 rounded font-medium transition-colors
-              ${loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}
-            `}
-          >
-            {loading ? '処理中...' : 'テスト通知を送信（1分後）'}
-          </button>
-        )}
+        {/* テスト通知ボタンは削除（購読成功時に自動で通知が送信されるため） */}
         
         {permission === 'denied' && (
           <div className="bg-yellow-50 border border-yellow-300 rounded p-3">

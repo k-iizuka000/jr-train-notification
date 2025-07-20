@@ -8,8 +8,16 @@ import type { PushSubscriptionData } from '@/types';
 export class SubscriptionMemoryStore {
   private static instance: SubscriptionMemoryStore;
   private subscriptions: Map<string, PushSubscriptionData> = new Map();
+  private instanceId: string;
+  private createdAt: Date;
 
-  private constructor() {}
+  private constructor() {
+    this.instanceId = Math.random().toString(36).substring(7);
+    this.createdAt = new Date();
+    console.log(`=== メモリストアインスタンス作成 ===`);
+    console.log(`インスタンスID: ${this.instanceId}`);
+    console.log(`作成日時: ${this.createdAt.toISOString()}`);
+  }
 
   static getInstance(): SubscriptionMemoryStore {
     if (!SubscriptionMemoryStore.instance) {
@@ -22,7 +30,9 @@ export class SubscriptionMemoryStore {
    * ストレージを初期化する（メモリストアでは何もしない）
    */
   async initialize(): Promise<void> {
-    console.log('メモリストアを使用中（初期化不要）');
+    console.log(`メモリストアを使用中（初期化不要）`);
+    console.log(`インスタンスID: ${this.instanceId}`);
+    console.log(`インスタンス作成から: ${Date.now() - this.createdAt.getTime()}ms経過`);
   }
 
   /**
@@ -30,6 +40,7 @@ export class SubscriptionMemoryStore {
    */
   async addSubscription(subscription: PushSubscriptionData): Promise<void> {
     console.log('=== メモリストアに購読情報を追加 ===');
+    console.log(`インスタンスID: ${this.instanceId}`);
     console.log('エンドポイント:', subscription.endpoint);
     console.log('現在の購読数（追加前）:', this.subscriptions.size);
     
@@ -40,6 +51,10 @@ export class SubscriptionMemoryStore {
     Array.from(this.subscriptions.keys()).forEach((ep, index) => {
       console.log(`  ${index + 1}. ${ep.substring(0, 50)}...`);
     });
+    
+    // Vercelの制限を警告
+    console.warn('⚠️ 注意: Vercelのサーバーレス環境では、このメモリストアはリクエスト間で共有されません。');
+    console.warn('⚠️ 本番環境では、Vercel KVやRedisなどの永続的なストレージの使用を推奨します。');
   }
 
   /**
@@ -60,20 +75,27 @@ export class SubscriptionMemoryStore {
    */
   async getSubscription(endpoint: string): Promise<PushSubscriptionData | null> {
     console.log('=== メモリストアから購読情報を検索 ===');
+    console.log(`インスタンスID: ${this.instanceId}`);
     console.log('検索エンドポイント:', endpoint);
     console.log('現在の購読数:', this.subscriptions.size);
     
     const found = this.subscriptions.get(endpoint);
     console.log('検索結果:', found ? '見つかりました' : '見つかりませんでした');
     
-    if (!found && this.subscriptions.size > 0) {
-      console.log('メモリ内のエンドポイント一覧:');
-      Array.from(this.subscriptions.keys()).forEach((ep, index) => {
-        console.log(`  ${index + 1}. ${ep.substring(0, 50)}...`);
-        if (ep === endpoint) {
-          console.log('    → 完全一致！（なぜ見つからない？）');
-        }
-      });
+    if (!found) {
+      if (this.subscriptions.size === 0) {
+        console.error('❌ エラー: メモリストアが空です。');
+        console.error('原因: Vercelのサーバーレス環境では、異なるリクエストは異なるインスタンスで処理される可能性があります。');
+        console.error('解決策: Vercel KV、Redis、またはデータベースを使用してください。');
+      } else {
+        console.log('メモリ内のエンドポイント一覧:');
+        Array.from(this.subscriptions.keys()).forEach((ep, index) => {
+          console.log(`  ${index + 1}. ${ep.substring(0, 50)}...`);
+          if (ep === endpoint) {
+            console.log('    → 完全一致！（なぜ見つからない？）');
+          }
+        });
+      }
     }
     
     return found || null;
