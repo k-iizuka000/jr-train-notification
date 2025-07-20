@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { subscriptionStore } from '@/lib/subscription-store';
+import { subscriptionStore } from '@/lib/subscription-store-wrapper';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import type { UnsubscribeRequest } from '@/types';

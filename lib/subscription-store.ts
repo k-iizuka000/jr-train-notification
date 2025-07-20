@@ -2,6 +2,9 @@ import type { PushSubscriptionData } from '@/types';
 import fs from 'fs/promises';
 import path from 'path';
 
+// ストレージタイプを環境変数で制御（Vercelではメモリストレージを使用）
+const USE_FILE_STORAGE = process.env.SUBSCRIPTION_STORAGE !== 'memory';
+
 // 開発環境では一時ディレクトリ、本番環境ではVercelの/tmpを使用
 const STORAGE_PATH = process.env.NODE_ENV === 'production' 
   ? '/tmp/subscriptions.json'  // Vercelでは/tmpディレクトリを使用

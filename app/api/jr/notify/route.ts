@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { subscriptionStore } from '@/lib/subscription-store';
+import { subscriptionStore } from '@/lib/subscription-store-wrapper';
 import { sendPushNotificationToAll, createStatusChangeNotification } from '@/lib/push-notification';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
 import type { NotifyRequest } from '@/types';

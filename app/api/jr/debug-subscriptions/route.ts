@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { subscriptionStore } from '@/lib/subscription-store';
+import { subscriptionStore } from '@/lib/subscription-store-wrapper';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
 
 // Vercel Runtime設定
