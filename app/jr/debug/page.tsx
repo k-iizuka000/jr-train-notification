@@ -14,13 +14,24 @@ export default function DebugPage() {
   const [debugInfo, setDebugInfo] = useState<ReturnType<typeof logger.getDebugInfo> | null>(null);
   const [logLevel, setLogLevel] = useState<LogLevel>(LogLevel.INFO);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [activeTab, setActiveTab] = useState<'logs' | 'errors' | 'history' | 'device'>('logs');
+  const [activeTab, setActiveTab] = useState<'logs' | 'errors' | 'history' | 'device' | 'subscriptions'>('logs');
   const [deviceInfo, setDeviceInfo] = useState<ReturnType<typeof getDeviceInfo> | null>(null);
   const [vapidValidation, setVapidValidation] = useState<{
     isValid: boolean;
     error?: string;
     debugInfo: ReturnType<typeof getVapidKeyDebugInfo>;
     publicKey: string;
+  } | null>(null);
+  const [subscriptions, setSubscriptions] = useState<{
+    count: number;
+    subscriptions: Array<{
+      index: number;
+      endpoint: string;
+      endpointPreview: string;
+      hasKeys: { p256dh: boolean; auth: boolean };
+      keysLength: { p256dh: number; auth: number };
+    }>;
+    timestamp: string;
   } | null>(null);
 
   // データを更新
@@ -72,6 +83,21 @@ export default function DebugPage() {
     a.download = `jr-logs-${new Date().toISOString()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // 購読情報を取得
+  const fetchSubscriptions = async () => {
+    try {
+      const response = await fetch('/api/jr/debug-subscriptions');
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptions(data.data);
+      } else {
+        console.error('購読情報の取得に失敗しました');
+      }
+    } catch (error) {
+      console.error('購読情報取得エラー:', error);
+    }
   };
 
   // ログレベルのカラー
@@ -227,6 +253,19 @@ export default function DebugPage() {
               >
                 デバイス情報
               </button>
+              <button
+                onClick={() => {
+                  setActiveTab('subscriptions');
+                  fetchSubscriptions();
+                }}
+                className={`px-6 py-3 text-sm font-medium ${
+                  activeTab === 'subscriptions'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                購読情報
+              </button>
             </nav>
           </div>
 
@@ -264,6 +303,76 @@ export default function DebugPage() {
                       )}
                     </div>
                   ))
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'subscriptions' && (
+              <div className="space-y-4">
+                {subscriptions ? (
+                  <>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-semibold">購読情報一覧（{subscriptions.count}件）</h3>
+                      <button
+                        onClick={fetchSubscriptions}
+                        className="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      >
+                        更新
+                      </button>
+                    </div>
+                    
+                    {subscriptions.count === 0 ? (
+                      <p className="text-gray-500 text-center py-8">購読情報がありません</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {subscriptions.subscriptions.map((sub) => (
+                          <div key={sub.index} className="bg-gray-50 p-4 rounded">
+                            <h4 className="font-medium mb-2">購読 #{sub.index}</h4>
+                            <div className="space-y-2 text-sm">
+                              <div>
+                                <span className="font-medium">エンドポイント（プレビュー）:</span>
+                                <p className="text-xs text-gray-600 break-all">{sub.endpointPreview}</p>
+                              </div>
+                              <div>
+                                <span className="font-medium">完全なエンドポイント:</span>
+                                <details className="mt-1">
+                                  <summary className="cursor-pointer text-blue-600">表示</summary>
+                                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto break-all">
+                                    {sub.endpoint}
+                                  </pre>
+                                </details>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <span className="font-medium">鍵の存在:</span>
+                                  <p>p256dh: {sub.hasKeys.p256dh ? '✅' : '❌'}</p>
+                                  <p>auth: {sub.hasKeys.auth ? '✅' : '❌'}</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">鍵の長さ:</span>
+                                  <p>p256dh: {sub.keysLength.p256dh}文字</p>
+                                  <p>auth: {sub.keysLength.auth}文字</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 text-right">
+                      最終更新: {new Date(subscriptions.timestamp).toLocaleString('ja-JP')}
+                    </p>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <button
+                      onClick={fetchSubscriptions}
+                      className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      購読情報を読み込む
+                    </button>
+                  </div>
                 )}
               </div>
             )}

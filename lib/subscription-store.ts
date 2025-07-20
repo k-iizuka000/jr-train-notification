@@ -61,10 +61,19 @@ export class SubscriptionStore {
   async addSubscription(subscription: PushSubscriptionData): Promise<void> {
     await this.initialize();
     
+    console.log('=== 購読情報を追加 ===');
+    console.log('エンドポイント:', subscription.endpoint);
+    console.log('エンドポイント長:', subscription.endpoint.length);
+    console.log('現在の購読数（追加前）:', this.subscriptions.size);
+    
     this.subscriptions.set(subscription.endpoint, subscription);
     await this.save();
     
-    console.log(`購読を追加しました: ${subscription.endpoint}`);
+    console.log('現在の購読数（追加後）:', this.subscriptions.size);
+    console.log('保存された全エンドポイント:');
+    Array.from(this.subscriptions.keys()).forEach((ep, index) => {
+      console.log(`  ${index + 1}. ${ep.substring(0, 50)}...`);
+    });
   }
 
   /**
@@ -87,7 +96,28 @@ export class SubscriptionStore {
    */
   async getSubscription(endpoint: string): Promise<PushSubscriptionData | null> {
     await this.initialize();
-    return this.subscriptions.get(endpoint) || null;
+    
+    console.log('=== 購読情報を検索 ===');
+    console.log('検索エンドポイント:', endpoint);
+    console.log('検索エンドポイント長:', endpoint.length);
+    console.log('現在の購読数:', this.subscriptions.size);
+    
+    const found = this.subscriptions.get(endpoint);
+    console.log('検索結果:', found ? '見つかりました' : '見つかりませんでした');
+    
+    if (!found && this.subscriptions.size > 0) {
+      console.log('保存されているエンドポイント一覧:');
+      Array.from(this.subscriptions.keys()).forEach((ep, index) => {
+        console.log(`  ${index + 1}. ${ep.substring(0, 50)}...`);
+        if (ep === endpoint) {
+          console.log('    → 完全一致！（なぜ見つからない？）');
+        } else if (ep.includes(endpoint.substring(0, 30))) {
+          console.log('    → 部分一致');
+        }
+      });
+    }
+    
+    return found || null;
   }
 
   /**
