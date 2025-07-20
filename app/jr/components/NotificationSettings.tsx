@@ -157,6 +157,50 @@ export default function NotificationSettings() {
     }
   };
 
+  // テスト通知を送信
+  const sendTestNotification = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      if (!registration) {
+        setError('Service Workerが登録されていません。');
+        return;
+      }
+      
+      // 現在の購読を取得
+      const subscription = await getCurrentSubscription(registration);
+      if (!subscription) {
+        setError('通知が有効化されていません。先に通知を有効にしてください。');
+        return;
+      }
+      
+      // テスト通知をスケジュール
+      const response = await fetch('/api/jr/test-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: subscription.endpoint
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'テスト通知の送信に失敗しました');
+      }
+      
+      setError('1分後にテスト通知が送信されます。');
+    } catch (err) {
+      console.error('テスト通知エラー:', err);
+      setError(err instanceof Error ? err.message : 'テスト通知の送信に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // プッシュ通知がサポートされていない場合
   if (!isSupported) {
     return (
@@ -212,6 +256,19 @@ export default function NotificationSettings() {
         >
           {loading ? '処理中...' : isSubscribed ? '通知を無効にする' : '通知を有効にする'}
         </button>
+        
+        {isSubscribed && (
+          <button
+            onClick={sendTestNotification}
+            disabled={loading}
+            className={`
+              w-full py-3 px-4 rounded font-medium transition-colors
+              ${loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}
+            `}
+          >
+            {loading ? '処理中...' : 'テスト通知を送信（1分後）'}
+          </button>
+        )}
         
         {permission === 'denied' && (
           <p className="text-sm text-red-600">
