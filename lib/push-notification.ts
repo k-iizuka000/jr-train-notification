@@ -29,9 +29,25 @@ function initializeWebPush() {
   logger.info('Web Push VAPID設定を初期化しました', 'PushNotification');
 }
 
-// 初期化を実行
+// 初期化を実行（環境変数が設定されている場合のみ）
+let isInitialized = false;
 try {
-  initializeWebPush();
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const subject = process.env.VAPID_SUBJECT;
+  
+  if (publicKey && privateKey && subject) {
+    initializeWebPush();
+    isInitialized = true;
+  } else {
+    logger.warn('VAPID設定が不足しています。プッシュ通知機能は無効です。', 'PushNotification', {
+      vapidStatus: {
+        publicKey: !!publicKey,
+        privateKey: !!privateKey,
+        subject: !!subject
+      }
+    });
+  }
 } catch (error) {
   errorHandler.handleError(error, 'Web Push Initialization');
 }
@@ -56,6 +72,10 @@ export async function sendPushNotification(
   subscription: PushSubscriptionData,
   payload: NotificationPayload
 ): Promise<void> {
+  if (!isInitialized) {
+    throw new PushNotificationError('VAPID設定が初期化されていません。環境変数を確認してください。');
+  }
+  
   try {
     logger.debug('通知を送信中...', 'PushNotification', {
       endpoint: subscription.endpoint,
