@@ -15,9 +15,12 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
     throw new Error('VAPID公開鍵が空です');
   }
 
+  // iOS Safari対策: 末尾の=を削除
+  const cleanedBase64 = base64String.replace(/=/g, '');
+  
   // パディングを追加（4の倍数になるように）
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
+  const padding = '='.repeat((4 - (cleanedBase64.length % 4)) % 4);
+  const base64 = (cleanedBase64 + padding)
     .replace(/\-/g, '+')
     .replace(/_/g, '/');
 
@@ -60,12 +63,13 @@ export function validateVapidPublicKey(publicKey: string): {
     };
   }
 
-  // URLBase64形式の文字のみで構成されているか確認
-  const urlBase64Pattern = /^[A-Za-z0-9\-_]+$/;
+  // URLBase64形式の文字のみで構成されているか確認（=も許可）
+  const urlBase64Pattern = /^[A-Za-z0-9\-_=]+$/;
   if (!urlBase64Pattern.test(publicKey)) {
+    const invalidChars = publicKey.match(/[^A-Za-z0-9\-_=]/g);
     return {
       isValid: false,
-      error: 'VAPID公開鍵に無効な文字が含まれています'
+      error: `VAPID公開鍵に無効な文字が含まれています: ${invalidChars?.join(', ')}`
     };
   }
 
@@ -108,10 +112,16 @@ export function getVapidKeyDebugInfo(publicKey: string): {
   hasValidCharacters: boolean;
   byteLength?: number;
   error?: string;
+  rawValue?: string;
+  firstChars?: string;
+  lastChars?: string;
 } {
   const info = {
     length: publicKey.length,
-    hasValidCharacters: /^[A-Za-z0-9\-_]+$/.test(publicKey)
+    hasValidCharacters: /^[A-Za-z0-9\-_=]+$/.test(publicKey),
+    rawValue: publicKey.substring(0, 20) + '...',
+    firstChars: publicKey.substring(0, 10),
+    lastChars: publicKey.substring(publicKey.length - 10)
   };
 
   try {

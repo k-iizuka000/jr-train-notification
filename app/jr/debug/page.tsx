@@ -307,9 +307,17 @@ export default function DebugPage() {
                           <p className="text-red-600"><span className="font-medium">エラー:</span> {vapidValidation.error}</p>
                         )}
                         <p><span className="font-medium">鍵の長さ:</span> {vapidValidation.debugInfo.length}文字</p>
-                        <p><span className="font-medium">有効な文字:</span> {vapidValidation.debugInfo.hasValidCharacters ? '✅' : '❌'}</p>
+                        <p><span className="font-medium">文字検証:</span> {vapidValidation.debugInfo.hasValidCharacters ? '✅' : '❌'}</p>
                         {vapidValidation.debugInfo.byteLength && (
                           <p><span className="font-medium">バイト長:</span> {vapidValidation.debugInfo.byteLength}</p>
+                        )}
+                        {vapidValidation.debugInfo.rawValue && (
+                          <p className="break-all"><span className="font-medium">鍵の一部:</span> {vapidValidation.debugInfo.rawValue}</p>
+                        )}
+                        {vapidValidation.debugInfo.firstChars && vapidValidation.debugInfo.lastChars && (
+                          <p className="text-xs text-gray-500">
+                            開始: {vapidValidation.debugInfo.firstChars} ... 終了: {vapidValidation.debugInfo.lastChars}
+                          </p>
                         )}
                         <details className="mt-2">
                           <summary className="cursor-pointer text-blue-600">公開鍵を表示</summary>

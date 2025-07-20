@@ -37,6 +37,16 @@ export default function NotificationSettings() {
         if (!validation.isValid) {
           console.error('VAPID鍵検証エラー:', validation.error);
           console.error('VAPID鍵デバッグ情報:', getVapidKeyDebugInfo(VAPID_PUBLIC_KEY));
+          console.error('VAPID公開鍵の値:', VAPID_PUBLIC_KEY);
+          console.error('VAPID公開鍵の長さ:', VAPID_PUBLIC_KEY.length);
+          // Base64文字のチェック
+          const invalidChars = VAPID_PUBLIC_KEY.match(/[^A-Za-z0-9\-_]/g);
+          if (invalidChars) {
+            console.error('無効な文字が含まれています:', invalidChars.join(', '));
+          }
+        } else {
+          console.log('VAPID公開鍵の検証成功');
+          console.log('VAPID公開鍵の長さ:', VAPID_PUBLIC_KEY.length);
         }
       }
       
