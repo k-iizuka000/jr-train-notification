@@ -44,11 +44,22 @@ export async function POST(request: NextRequest) {
     console.log('購読情報を取得中:', body.endpoint);
     const subscription = await subscriptionStore.getSubscription(body.endpoint);
     
+    // デバッグ用：現在の全購読情報を出力
+    const allSubscriptions = await subscriptionStore.getAllSubscriptions();
+    console.log('=== 現在の全購読情報 ===');
+    console.log('購読数:', allSubscriptions.length);
+    allSubscriptions.forEach((sub, index) => {
+      console.log(`購読${index + 1}:`);
+      console.log(`  エンドポイント: ${sub.endpoint.substring(0, 50)}...`);
+      console.log(`  完全一致チェック: ${sub.endpoint === body.endpoint ? '✅ 一致' : '❌ 不一致'}`);
+    });
+    
     if (!subscription) {
       console.error('購読情報が見つかりません:', body.endpoint);
+      console.error('エンドポイント長:', body.endpoint.length);
       return createApiError(
         'SUBSCRIPTION_NOT_FOUND',
-        '購読情報が見つかりません。',
+        '購読情報が見つかりません。通知を一度無効にしてから、再度有効にしてください。',
         404,
         {
           'Content-Type': 'application/json',

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { subscriptionStore } from '@/lib/subscription-store';
 import { createApiResponse, createApiError } from '@/lib/api-helpers';
 
@@ -50,4 +50,16 @@ export async function GET(request: NextRequest) {
       }
     );
   }
+}
+
+// OPTIONS メソッドの処理（CORS対応）
+export async function OPTIONS(request: NextRequest) {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }

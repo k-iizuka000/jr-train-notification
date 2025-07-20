@@ -34,6 +34,16 @@ export default function JRPage() {
           <p>※ JR東日本の公式サイトから取得した情報を表示しています</p>
           <p>※ 平日の朝7:00と夕方17:00に定期チェックを行います</p>
         </div>
+        
+        {/* デバッグページへのリンク */}
+        <div className="mt-8 pt-8 border-t border-gray-200">
+          <Link
+            href="/jr/debug"
+            className="text-gray-500 hover:text-gray-700 text-xs underline"
+          >
+            デバッグページ（開発用）
+          </Link>
+        </div>
       </div>
       
       <InstallPrompt />

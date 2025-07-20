@@ -88,15 +88,28 @@ export default function DebugPage() {
   // 購読情報を取得
   const fetchSubscriptions = async () => {
     try {
+      console.log('購読情報を取得中...');
       const response = await fetch('/api/jr/debug-subscriptions');
+      console.log('レスポンスステータス:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setSubscriptions(data.data);
+        console.log('取得した購読情報:', data);
+        
+        if (data.success && data.data) {
+          setSubscriptions(data.data);
+        } else {
+          console.error('購読情報のフォーマットが不正:', data);
+          alert('購読情報の取得に失敗しました（フォーマットエラー）');
+        }
       } else {
-        console.error('購読情報の取得に失敗しました');
+        const errorText = await response.text();
+        console.error('購読情報の取得に失敗しました:', response.status, errorText);
+        alert(`購読情報の取得に失敗しました（ステータス: ${response.status}）`);
       }
     } catch (error) {
       console.error('購読情報取得エラー:', error);
+      alert('購読情報の取得中にエラーが発生しました');
     }
   };
 
