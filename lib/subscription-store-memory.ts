@@ -19,6 +19,13 @@ export class SubscriptionMemoryStore {
   }
 
   /**
+   * ストレージを初期化する（メモリストアでは何もしない）
+   */
+  async initialize(): Promise<void> {
+    console.log('メモリストアを使用中（初期化不要）');
+  }
+
+  /**
    * 購読を追加する
    */
   async addSubscription(subscription: PushSubscriptionData): Promise<void> {
@@ -86,6 +93,23 @@ export class SubscriptionMemoryStore {
    */
   async getCount(): Promise<number> {
     return this.subscriptions.size;
+  }
+
+  /**
+   * 無効な購読を削除する
+   */
+  async removeInvalidSubscriptions(endpoints: string[]): Promise<void> {
+    console.log('=== メモリストアから無効な購読を削除 ===');
+    console.log('削除対象数:', endpoints.length);
+    
+    let removed = 0;
+    for (const endpoint of endpoints) {
+      if (this.subscriptions.delete(endpoint)) {
+        removed++;
+      }
+    }
+    
+    console.log(`${removed}件の無効な購読を削除しました`);
   }
 
   /**
