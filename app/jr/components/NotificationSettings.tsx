@@ -67,8 +67,24 @@ export default function NotificationSettings() {
       const perm = getNotificationPermission();
       setPermission(perm);
       
-      // Service Workerを登録
-      const reg = await registerServiceWorker();
+      // Service Workerを登録（iOSの場合は専用SW）
+      let reg;
+      if (isIOS()) {
+        // 既存のService Workerを解除
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+        
+        // iOS専用Service Workerを登録
+        reg = await navigator.serviceWorker.register('/sw-ios.js', {
+          scope: '/'
+        });
+        console.log('iOS専用Service Worker登録');
+      } else {
+        reg = await registerServiceWorker();
+      }
+      
       if (reg) {
         setRegistration(reg);
         
@@ -276,10 +292,40 @@ export default function NotificationSettings() {
       </div>
     );
   }
+  
+  // iOSで非PWAモードの場合
+  if (isIOS() && !isStandalonePWA()) {
+    return (
+      <div className="border border-blue-300 rounded-lg p-6 bg-blue-50">
+        <h3 className="text-lg font-semibold mb-4 text-blue-800">
+          iPhoneで通知を受け取るには
+        </h3>
+        <div className="space-y-4">
+          <p className="text-sm text-blue-700">
+            プッシュ通知を利用するには、このページをホーム画面に追加してください。
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
+            <li>下部の共有ボタン <span className="inline-block px-2 py-1 bg-white rounded">□↑</span> をタップ</li>
+            <li>「ホーム画面に追加」を選択</li>
+            <li>右上の「追加」をタップ</li>
+            <li>ホーム画面から「JR高崎線」アプリを開く</li>
+          </ol>
+          <div className="mt-4 p-3 bg-white rounded">
+            <p className="text-xs text-gray-600">
+              ※ iOS 16.4以降が必要です<br />
+              ※ ホーム画面から開いた場合のみ通知機能が利用できます
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border rounded-lg p-6">
-      <h3 className="text-lg font-semibold mb-4">プッシュ通知設定</h3>
+      <h3 className="text-lg font-semibold mb-4">
+        {isIOS() ? 'iPhone通知設定' : 'プッシュ通知設定'}
+      </h3>
       
       <div className="space-y-4">
         <div>
@@ -292,6 +338,11 @@ export default function NotificationSettings() {
               {isSubscribed ? '有効' : '無効'}
             </span>
           </p>
+          {isIOS() && (
+            <p className="text-xs text-blue-600 mt-1">
+              ※ iPhoneでの通知設定です
+            </p>
+          )}
         </div>
         
         {error && (
@@ -344,17 +395,6 @@ export default function NotificationSettings() {
           </div>
         )}
         
-        {isIOS() && !isStandalonePWA() && (
-          <div className="bg-blue-50 border border-blue-300 rounded p-3">
-            <p className="text-sm text-blue-700 font-semibold">
-              iOSでプッシュ通知を利用するには
-            </p>
-            <p className="text-sm text-blue-600 mt-1">
-              このサイトをホーム画面に追加してからアプリを開いてください。
-              ブラウザから直接アクセスした場合、プッシュ通知は利用できません。
-            </p>
-          </div>
-        )}
         
         {/* デバッグツール（iOSかつエラーがある場合のみ表示） */}
         {isIOS() && error && error.includes('エラー') && (
